@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - prisma-db:/app/prisma
+    restart: unless-stopped
+    command: pnpm run start
+volumes:
+  prisma-db:
+    driver: local 
