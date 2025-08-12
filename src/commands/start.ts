@@ -3,8 +3,9 @@ import { PrismaClient } from '../../prisma-client';
 import { handleAddListing } from './add';
 import { handleBrowseListings } from './browse';
 import { handleMyListings } from './mylistings';
+import { BotContext } from '../types/context';
 
-export function registerStartCommand(bot: Telegraf<Scenes.WizardContext>, prisma: PrismaClient) {
+export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaClient) {
   bot.start(async (ctx) => {
     if (ctx.chat?.type !== 'private') return;
     await ctx.reply(
@@ -50,6 +51,8 @@ export function registerStartCommand(bot: Telegraf<Scenes.WizardContext>, prisma
   bot.action('all_listings', async (ctx) => {
     console.log('All Listings button pressed');
     await ctx.answerCbQuery();
-    await ctx.telegram.sendMessage(ctx.chat.id, '/listings');
+    if (ctx.chat?.id) {
+      await ctx.telegram.sendMessage(ctx.chat.id, '/listings');
+    }
   });
 } 

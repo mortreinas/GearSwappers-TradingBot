@@ -1,7 +1,7 @@
-import { Scenes } from 'telegraf';
-import { PrismaClient } from '../../prisma-client';
+import { Context } from 'telegraf';
 
 export interface SessionData {
+  cursor: number;
   addListing?: {
     title?: string;
     description?: string;
@@ -12,7 +12,9 @@ export interface SessionData {
   };
 }
 
-export interface BotContext extends Scenes.WizardContext {
-  prisma: PrismaClient;
+export interface BotContext extends Context {
   session: SessionData;
+  scene: any;
+  wizard: any;
+  prisma: any; // Will be injected via middleware
 } 

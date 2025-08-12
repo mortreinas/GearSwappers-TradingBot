@@ -5,8 +5,9 @@ import { registerAddListingCommand } from './add';
 import { registerMyListingsCommand } from './mylistings';
 import { registerBrowseListingsCommand } from './browse';
 import { registerGroupListingsCommand } from './listings';
+import { BotContext } from '../types/context';
 
-export function setupCommands(bot: Telegraf<Scenes.WizardContext>, prisma: PrismaClient) {
+export function setupCommands(bot: Telegraf<BotContext>, prisma: PrismaClient) {
   registerStartCommand(bot, prisma);
   registerAddListingCommand(bot, prisma);
   registerMyListingsCommand(bot, prisma);

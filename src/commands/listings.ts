@@ -1,7 +1,8 @@
 import { Telegraf, Markup, Scenes } from 'telegraf';
 import { PrismaClient } from '../../prisma-client';
+import { BotContext } from '../types/context';
 
-export function registerGroupListingsCommand(bot: Telegraf<Scenes.WizardContext>, prisma: PrismaClient) {
+export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: PrismaClient) {
   // Show all listings as buttons with minimal info
   bot.command('listings', async (ctx) => {
     const listings = await prisma.listing.findMany({
@@ -39,7 +40,7 @@ export function registerGroupListingsCommand(bot: Telegraf<Scenes.WizardContext>
     msg += `\n📞 Contact: ${listing.user.contact}`;
     if (photos.length) {
       await ctx.replyWithMediaGroup(
-        photos.map((fileId, i) => ({
+        photos.map((fileId: string, i: number) => ({
           type: 'photo',
           media: fileId,
           ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})

@@ -1,9 +1,10 @@
 import { Telegraf, Markup, Scenes } from 'telegraf';
 import { PrismaClient } from '../../prisma-client';
+import { BotContext } from '../types/context';
 
 const PAGE_SIZE = 3;
 
-export async function handleBrowseListings(ctx, prisma: PrismaClient, page = 0) {
+export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient, page = 0) {
   console.log('sendListings called, page:', page);
   const listings = await prisma.listing.findMany({
     orderBy: { createdAt: 'desc' },
@@ -35,7 +36,7 @@ export async function handleBrowseListings(ctx, prisma: PrismaClient, page = 0) 
   ]));
 }
 
-export function registerBrowseListingsCommand(bot: Telegraf<Scenes.WizardContext>, prisma: PrismaClient) {
+export function registerBrowseListingsCommand(bot: Telegraf<BotContext>, prisma: PrismaClient) {
   bot.command('browse', async (ctx) => {
     console.log('/browse command triggered');
     if (ctx.chat?.type !== 'private') return;
