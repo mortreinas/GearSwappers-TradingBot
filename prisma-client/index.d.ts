@@ -1880,6 +1880,7 @@ export namespace Prisma {
      * The data used to create many Users.
      */
     data: UserCreateManyInput | UserCreateManyInput[]
+    skipDuplicates?: boolean
   }
 
   /**
@@ -1898,6 +1899,7 @@ export namespace Prisma {
      * The data used to create many Users.
      */
     data: UserCreateManyInput | UserCreateManyInput[]
+    skipDuplicates?: boolean
   }
 
   /**
@@ -2108,6 +2110,7 @@ export namespace Prisma {
     description: string | null
     price: string | null
     location: string | null
+    marketplaceLink: string | null
     photos: string | null
     createdAt: Date | null
   }
@@ -2119,6 +2122,7 @@ export namespace Prisma {
     description: string | null
     price: string | null
     location: string | null
+    marketplaceLink: string | null
     photos: string | null
     createdAt: Date | null
   }
@@ -2130,6 +2134,7 @@ export namespace Prisma {
     description: number
     price: number
     location: number
+    marketplaceLink: number
     photos: number
     createdAt: number
     _all: number
@@ -2153,6 +2158,7 @@ export namespace Prisma {
     description?: true
     price?: true
     location?: true
+    marketplaceLink?: true
     photos?: true
     createdAt?: true
   }
@@ -2164,6 +2170,7 @@ export namespace Prisma {
     description?: true
     price?: true
     location?: true
+    marketplaceLink?: true
     photos?: true
     createdAt?: true
   }
@@ -2175,6 +2182,7 @@ export namespace Prisma {
     description?: true
     price?: true
     location?: true
+    marketplaceLink?: true
     photos?: true
     createdAt?: true
     _all?: true
@@ -2273,6 +2281,7 @@ export namespace Prisma {
     description: string
     price: string | null
     location: string
+    marketplaceLink: string | null
     photos: string
     createdAt: Date
     _count: ListingCountAggregateOutputType | null
@@ -2303,6 +2312,7 @@ export namespace Prisma {
     description?: boolean
     price?: boolean
     location?: boolean
+    marketplaceLink?: boolean
     photos?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -2315,6 +2325,7 @@ export namespace Prisma {
     description?: boolean
     price?: boolean
     location?: boolean
+    marketplaceLink?: boolean
     photos?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -2327,6 +2338,7 @@ export namespace Prisma {
     description?: boolean
     price?: boolean
     location?: boolean
+    marketplaceLink?: boolean
     photos?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -2339,11 +2351,12 @@ export namespace Prisma {
     description?: boolean
     price?: boolean
     location?: boolean
+    marketplaceLink?: boolean
     photos?: boolean
     createdAt?: boolean
   }
 
-  export type ListingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "title" | "description" | "price" | "location" | "photos" | "createdAt", ExtArgs["result"]["listing"]>
+  export type ListingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "title" | "description" | "price" | "location" | "marketplaceLink" | "photos" | "createdAt", ExtArgs["result"]["listing"]>
   export type ListingInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
   }
@@ -2366,6 +2379,7 @@ export namespace Prisma {
       description: string
       price: string | null
       location: string
+      marketplaceLink: string | null
       photos: string
       createdAt: Date
     }, ExtArgs["result"]["listing"]>
@@ -2798,6 +2812,7 @@ export namespace Prisma {
     readonly description: FieldRef<"Listing", 'String'>
     readonly price: FieldRef<"Listing", 'String'>
     readonly location: FieldRef<"Listing", 'String'>
+    readonly marketplaceLink: FieldRef<"Listing", 'String'>
     readonly photos: FieldRef<"Listing", 'String'>
     readonly createdAt: FieldRef<"Listing", 'DateTime'>
   }
@@ -3029,6 +3044,7 @@ export namespace Prisma {
      * The data used to create many Listings.
      */
     data: ListingCreateManyInput | ListingCreateManyInput[]
+    skipDuplicates?: boolean
   }
 
   /**
@@ -3047,6 +3063,7 @@ export namespace Prisma {
      * The data used to create many Listings.
      */
     data: ListingCreateManyInput | ListingCreateManyInput[]
+    skipDuplicates?: boolean
     /**
      * Choose, which related nodes to fetch as well
      */
@@ -3217,6 +3234,9 @@ export namespace Prisma {
    */
 
   export const TransactionIsolationLevel: {
+    ReadUncommitted: 'ReadUncommitted',
+    ReadCommitted: 'ReadCommitted',
+    RepeatableRead: 'RepeatableRead',
     Serializable: 'Serializable'
   };
 
@@ -3240,6 +3260,7 @@ export namespace Prisma {
     description: 'description',
     price: 'price',
     location: 'location',
+    marketplaceLink: 'marketplaceLink',
     photos: 'photos',
     createdAt: 'createdAt'
   };
@@ -3253,6 +3274,14 @@ export namespace Prisma {
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const QueryMode: {
+    default: 'default',
+    insensitive: 'insensitive'
+  };
+
+  export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
   export const NullsOrder: {
@@ -3276,9 +3305,23 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Int[]'
+   */
+  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
+    
+
+
+  /**
+   * Reference to a field of type 'String[]'
+   */
+  export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
     
 
 
@@ -3290,9 +3333,23 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'DateTime[]'
+   */
+  export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+  /**
+   * Reference to a field of type 'Float[]'
+   */
+  export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
   /**
    * Deep Input Types
@@ -3361,6 +3418,7 @@ export namespace Prisma {
     description?: StringFilter<"Listing"> | string
     price?: StringNullableFilter<"Listing"> | string | null
     location?: StringFilter<"Listing"> | string
+    marketplaceLink?: StringNullableFilter<"Listing"> | string | null
     photos?: StringFilter<"Listing"> | string
     createdAt?: DateTimeFilter<"Listing"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -3373,6 +3431,7 @@ export namespace Prisma {
     description?: SortOrder
     price?: SortOrderInput | SortOrder
     location?: SortOrder
+    marketplaceLink?: SortOrderInput | SortOrder
     photos?: SortOrder
     createdAt?: SortOrder
     user?: UserOrderByWithRelationInput
@@ -3388,6 +3447,7 @@ export namespace Prisma {
     description?: StringFilter<"Listing"> | string
     price?: StringNullableFilter<"Listing"> | string | null
     location?: StringFilter<"Listing"> | string
+    marketplaceLink?: StringNullableFilter<"Listing"> | string | null
     photos?: StringFilter<"Listing"> | string
     createdAt?: DateTimeFilter<"Listing"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -3400,6 +3460,7 @@ export namespace Prisma {
     description?: SortOrder
     price?: SortOrderInput | SortOrder
     location?: SortOrder
+    marketplaceLink?: SortOrderInput | SortOrder
     photos?: SortOrder
     createdAt?: SortOrder
     _count?: ListingCountOrderByAggregateInput
@@ -3419,6 +3480,7 @@ export namespace Prisma {
     description?: StringWithAggregatesFilter<"Listing"> | string
     price?: StringNullableWithAggregatesFilter<"Listing"> | string | null
     location?: StringWithAggregatesFilter<"Listing"> | string
+    marketplaceLink?: StringNullableWithAggregatesFilter<"Listing"> | string | null
     photos?: StringWithAggregatesFilter<"Listing"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Listing"> | Date | string
   }
@@ -3478,6 +3540,7 @@ export namespace Prisma {
     description: string
     price?: string | null
     location: string
+    marketplaceLink?: string | null
     photos: string
     createdAt?: Date | string
     user: UserCreateNestedOneWithoutListingsInput
@@ -3490,6 +3553,7 @@ export namespace Prisma {
     description: string
     price?: string | null
     location: string
+    marketplaceLink?: string | null
     photos: string
     createdAt?: Date | string
   }
@@ -3499,6 +3563,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     price?: NullableStringFieldUpdateOperationsInput | string | null
     location?: StringFieldUpdateOperationsInput | string
+    marketplaceLink?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutListingsNestedInput
@@ -3511,6 +3576,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     price?: NullableStringFieldUpdateOperationsInput | string | null
     location?: StringFieldUpdateOperationsInput | string
+    marketplaceLink?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -3522,6 +3588,7 @@ export namespace Prisma {
     description: string
     price?: string | null
     location: string
+    marketplaceLink?: string | null
     photos: string
     createdAt?: Date | string
   }
@@ -3531,6 +3598,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     price?: NullableStringFieldUpdateOperationsInput | string | null
     location?: StringFieldUpdateOperationsInput | string
+    marketplaceLink?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -3542,14 +3610,15 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     price?: NullableStringFieldUpdateOperationsInput | string | null
     location?: StringFieldUpdateOperationsInput | string
+    marketplaceLink?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -3559,8 +3628,8 @@ export namespace Prisma {
 
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[]
-    notIn?: string[]
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3568,13 +3637,14 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
   export type StringNullableFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | null
-    notIn?: string[] | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3582,6 +3652,7 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
@@ -3631,8 +3702,8 @@ export namespace Prisma {
 
   export type IntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -3647,8 +3718,8 @@ export namespace Prisma {
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[]
-    notIn?: string[]
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3656,6 +3727,7 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
     not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
@@ -3664,8 +3736,8 @@ export namespace Prisma {
 
   export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | null
-    notIn?: string[] | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3673,6 +3745,7 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
     not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedStringNullableFilter<$PrismaModel>
@@ -3681,8 +3754,8 @@ export namespace Prisma {
 
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[]
-    notIn?: Date[] | string[]
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -3702,6 +3775,7 @@ export namespace Prisma {
     description?: SortOrder
     price?: SortOrder
     location?: SortOrder
+    marketplaceLink?: SortOrder
     photos?: SortOrder
     createdAt?: SortOrder
   }
@@ -3718,6 +3792,7 @@ export namespace Prisma {
     description?: SortOrder
     price?: SortOrder
     location?: SortOrder
+    marketplaceLink?: SortOrder
     photos?: SortOrder
     createdAt?: SortOrder
   }
@@ -3729,6 +3804,7 @@ export namespace Prisma {
     description?: SortOrder
     price?: SortOrder
     location?: SortOrder
+    marketplaceLink?: SortOrder
     photos?: SortOrder
     createdAt?: SortOrder
   }
@@ -3740,8 +3816,8 @@ export namespace Prisma {
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[]
-    notIn?: Date[] | string[]
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -3830,8 +3906,8 @@ export namespace Prisma {
 
   export type NestedIntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -3841,8 +3917,8 @@ export namespace Prisma {
 
   export type NestedStringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[]
-    notIn?: string[]
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3855,8 +3931,8 @@ export namespace Prisma {
 
   export type NestedStringNullableFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | null
-    notIn?: string[] | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3869,8 +3945,8 @@ export namespace Prisma {
 
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -3885,8 +3961,8 @@ export namespace Prisma {
 
   export type NestedFloatFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -3896,8 +3972,8 @@ export namespace Prisma {
 
   export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[]
-    notIn?: string[]
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3913,8 +3989,8 @@ export namespace Prisma {
 
   export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | null
-    notIn?: string[] | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -3930,8 +4006,8 @@ export namespace Prisma {
 
   export type NestedIntNullableFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | null
-    notIn?: number[] | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -3941,8 +4017,8 @@ export namespace Prisma {
 
   export type NestedDateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[]
-    notIn?: Date[] | string[]
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -3952,8 +4028,8 @@ export namespace Prisma {
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[]
-    notIn?: Date[] | string[]
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -3969,6 +4045,7 @@ export namespace Prisma {
     description: string
     price?: string | null
     location: string
+    marketplaceLink?: string | null
     photos: string
     createdAt?: Date | string
   }
@@ -3979,6 +4056,7 @@ export namespace Prisma {
     description: string
     price?: string | null
     location: string
+    marketplaceLink?: string | null
     photos: string
     createdAt?: Date | string
   }
@@ -3990,6 +4068,7 @@ export namespace Prisma {
 
   export type ListingCreateManyUserInputEnvelope = {
     data: ListingCreateManyUserInput | ListingCreateManyUserInput[]
+    skipDuplicates?: boolean
   }
 
   export type ListingUpsertWithWhereUniqueWithoutUserInput = {
@@ -4018,6 +4097,7 @@ export namespace Prisma {
     description?: StringFilter<"Listing"> | string
     price?: StringNullableFilter<"Listing"> | string | null
     location?: StringFilter<"Listing"> | string
+    marketplaceLink?: StringNullableFilter<"Listing"> | string | null
     photos?: StringFilter<"Listing"> | string
     createdAt?: DateTimeFilter<"Listing"> | Date | string
   }
@@ -4070,6 +4150,7 @@ export namespace Prisma {
     description: string
     price?: string | null
     location: string
+    marketplaceLink?: string | null
     photos: string
     createdAt?: Date | string
   }
@@ -4079,6 +4160,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     price?: NullableStringFieldUpdateOperationsInput | string | null
     location?: StringFieldUpdateOperationsInput | string
+    marketplaceLink?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -4089,6 +4171,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     price?: NullableStringFieldUpdateOperationsInput | string | null
     location?: StringFieldUpdateOperationsInput | string
+    marketplaceLink?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -4099,6 +4182,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     price?: NullableStringFieldUpdateOperationsInput | string | null
     location?: StringFieldUpdateOperationsInput | string
+    marketplaceLink?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

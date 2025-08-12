@@ -51,7 +51,7 @@ async function cleanBotMessages(ctx: BotContext) {
 
 const PAGE_SIZE = 3;
 
-export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient) {
+export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient, page = 0) {
   try {
     if (ctx.chat?.type !== 'private') return;
     
@@ -81,18 +81,59 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
     }
     
     // Show only the first listing from this page
-    const listing = listings[0];
+    const listing = listings[page];
+    if (!listing) {
+      // Page out of bounds, show first listing
+      const firstListing = listings[0];
+      const photos = JSON.parse(firstListing.photos || '[]');
+      let msg = `*${firstListing.title}*\n${firstListing.description}\n`;
+      if (firstListing.price) msg += `\n💵 Price: ${firstListing.price}`;
+      msg += `\n📍 Location: ${firstListing.location}`;
+      if (firstListing.marketplaceLink) msg += `\n🔗 [Marketplace Link](${firstListing.marketplaceLink})`;
+      msg += `\n📞 Contact: ${firstListing.user.contact}`;
+      msg += `\n\n📄 Page 1 of ${Math.ceil(listings.length / PAGE_SIZE)}`;
+      
+      const buttons = [];
+      if (listings.length > 1) buttons.push(Markup.button.callback('Next ➡️', `browse_next_0`));
+      
+      const actionButtons = [];
+      if (buttons.length > 0) actionButtons.push(buttons);
+      actionButtons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
+      
+      const replyMarkup = Markup.inlineKeyboard(actionButtons).reply_markup;
+      
+      // Show the listing with photos first (can't be edited)
+      if (photos.length > 0) {
+        const mediaGroup = photos.map((fileId: string, i: number) => ({
+          type: 'photo', media: fileId,
+          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+        }));
+        await ctx.replyWithMediaGroup(mediaGroup);
+      } else {
+        // No photos, just send the listing text
+        await ctx.reply(msg, { parse_mode: 'Markdown' });
+      }
+      
+      // Always send a fresh interactive navigation menu as the LAST message
+      const navigationMessage = await ctx.reply('Navigation:', { reply_markup: replyMarkup });
+      
+      // Store this navigation message ID for future editing
+      if (!ctx.session) (ctx as any).session = {};
+      (ctx.session as any).navigationMessageId = navigationMessage.message_id;
+      return;
+    }
+    
     const photos = JSON.parse(listing.photos || '[]');
     let msg = `*${listing.title}*\n${listing.description}\n`;
     if (listing.price) msg += `\n💵 Price: ${listing.price}`;
     msg += `\n📍 Location: ${listing.location}`;
     if (listing.marketplaceLink) msg += `\n🔗 [Marketplace Link](${listing.marketplaceLink})`;
     msg += `\n📞 Contact: ${listing.user.contact}`;
-    msg += `\n\n📄 Page ${page + 1} of ${Math.ceil((await prisma.listing.count()) / PAGE_SIZE)}`;
+    msg += `\n\n📄 Page ${page + 1} of ${Math.ceil(listings.length / PAGE_SIZE)}`;
     
     const buttons = [];
-    if (page > 0) buttons.push(Markup.button.callback('⬅️ Previous', `browse_${page - 1}`));
-    if (page < Math.ceil((await prisma.listing.count()) / PAGE_SIZE) - 1) buttons.push(Markup.button.callback('Next ➡️', `browse_${page + 1}`));
+    if (page > 0) buttons.push(Markup.button.callback('⬅️ Previous', `browse_prev_${page}`));
+    if (page < listings.length - 1) buttons.push(Markup.button.callback('Next ➡️', `browse_next_${page}`));
     
     const actionButtons = [];
     if (buttons.length > 0) actionButtons.push(buttons);
@@ -154,18 +195,19 @@ export function registerBrowseListingsCommand(bot: Telegraf<BotContext>, prisma:
   });
   bot.action(/browse_next_(\d+)/, async (ctx) => {
     try {
-      const page = parseInt(ctx.match[1], 10) + 1;
-      await handleBrowseListings(ctx, prisma, page);
+      const page = parseInt(ctx.match[1], 10);
+      await handleBrowseListings(ctx, prisma, page + 1);
       await ctx.answerCbQuery();
     } catch (error) {
       console.error('Error in browse_next action:', error);
       await ctx.answerCbQuery('Error loading next page');
     }
   });
+  
   bot.action(/browse_prev_(\d+)/, async (ctx) => {
     try {
-      const page = Math.max(0, parseInt(ctx.match[1], 10) - 1);
-      await handleBrowseListings(ctx, prisma, page);
+      const page = parseInt(ctx.match[1], 10);
+      await handleBrowseListings(ctx, prisma, Math.max(0, page - 1));
       await ctx.answerCbQuery();
     } catch (error) {
       console.error('Error in browse_prev action:', error);
