@@ -47,8 +47,8 @@ async function startBot() {
     });
 
     bot.use(session());
-    setupCommands(bot, prisma);
     setupScenes(bot, prisma);
+    setupCommands(bot, prisma);
 
     // Add error handling
     bot.catch((err, ctx) => {

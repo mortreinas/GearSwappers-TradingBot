@@ -7,41 +7,90 @@ import { BotContext } from '../types/context';
 
 // Main menu function that can be called from anywhere
 export async function showMainMenu(ctx: BotContext) {
-  const menuText = `🎸 *GearTrader Main Menu*\n\nChoose what you'd like to do:`;
-  const menuButtons = Markup.inlineKeyboard([
-    [Markup.button.callback('🎛 Browse Listings', 'browse_listings')],
-    [Markup.button.callback('➕ Add New Listing', 'add_listing')],
-    [Markup.button.callback('📦 My Listings', 'my_listings')],
-    [Markup.button.callback('ℹ️ Help & Info', 'help_info')],
-  ]).reply_markup;
+  try {
+    // Get only active listings count
+    const totalListings = await (ctx as any).prisma.listing.count();
 
-  // If we have a main message to update, edit it
-  if (ctx.session && (ctx.session as any).mainMessageId) {
-    try {
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        menuText,
-        { parse_mode: 'Markdown', reply_markup: menuButtons }
-      );
-      return;
-    } catch (error) {
-      console.log('Failed to edit message, sending new one');
+    const menuText = `🎸 *GearTrader Main Menu*\n\n` +
+      `📊 *Active Listings:* ${totalListings}\n\n` +
+      `Choose what you'd like to do:`;
+      
+    const menuButtons = Markup.inlineKeyboard([
+      [Markup.button.callback('🎛 Browse Listings', 'browse_listings')],
+      [Markup.button.callback('➕ Add New Listing', 'add_listing')],
+      [Markup.button.callback('📦 My Listings', 'my_listings')],
+      [Markup.button.callback('ℹ️ Help & Info', 'help_info')],
+      [Markup.button.callback('🔄 Refresh', 'refresh_stats')],
+    ]).reply_markup;
+
+    // Ensure session exists and has mainMessageId
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          menuText,
+          { parse_mode: 'Markdown', reply_markup: menuButtons }
+        );
+        return;
+      } catch (error) {
+        console.log('Failed to edit message, sending new one');
+      }
     }
-  }
 
-  // Send new message and store its ID
-  const sent = await ctx.reply(menuText, {
-    parse_mode: 'Markdown',
-    reply_markup: menuButtons
-  });
-  
-  // Initialize session if it doesn't exist
-  if (!ctx.session) {
-    (ctx as any).session = {};
+    // Send new message and store its ID
+    const sent = await ctx.reply(menuText, {
+      parse_mode: 'Markdown',
+      reply_markup: menuButtons
+    });
+    
+    // Initialize session if it doesn't exist
+    if (!ctx.session) {
+      (ctx as any).session = {};
+    }
+    (ctx.session as any).mainMessageId = sent.message_id;
+  } catch (error) {
+    console.error('Error loading menu statistics:', error);
+    
+    // Fallback menu without statistics if there's an error
+    const fallbackMenuText = `🎸 *GearTrader Main Menu*\n\nChoose what you'd like to do:`;
+    const fallbackMenuButtons = Markup.inlineKeyboard([
+      [Markup.button.callback('🎛 Browse Listings', 'browse_listings')],
+      [Markup.button.callback('➕ Add New Listing', 'add_listing')],
+      [Markup.button.callback('📦 My Listings', 'my_listings')],
+      [Markup.button.callback('ℹ️ Help & Info', 'help_info')],
+      [Markup.button.callback('🔄 Refresh', 'refresh_stats')],
+    ]).reply_markup;
+
+    // Ensure session exists and has mainMessageId
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          fallbackMenuText,
+          { parse_mode: 'Markdown', reply_markup: fallbackMenuButtons }
+        );
+        return;
+      } catch (error) {
+        console.log('Failed to edit fallback message, sending new one');
+      }
+    }
+
+    // Send new fallback message and store its ID
+    const sent = await ctx.reply(fallbackMenuText, {
+      parse_mode: 'Markdown',
+      reply_markup: fallbackMenuButtons
+    });
+    
+    // Initialize session if it doesn't exist
+    if (!ctx.session) {
+      (ctx as any).session = {};
+    }
+    (ctx.session as any).mainMessageId = sent.message_id;
   }
-  (ctx.session as any).mainMessageId = sent.message_id;
 }
 
 export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaClient) {
@@ -231,8 +280,8 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
     
     const helpText = `🎸 *GearTrader Help*\n\n` +
       `*Commands:*\n` +
-      `• /start - Show main menu\n` +
-      `• /menu - Show main menu\n` +
+      `• /start - Show main menu with statistics\n` +
+      `• /menu - Show main menu with statistics\n` +
       `• /add - Add new listing\n` +
       `• /browse - Browse all listings\n` +
       `• /listings - View all listings\n` +
@@ -241,7 +290,9 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
       `• Add listings with photos\n` +
       `• Browse and search listings\n` +
       `• Contact sellers directly\n` +
-      `• Manage your own listings\n\n` +
+      `• Manage your own listings\n` +
+      `• Optional marketplace links\n` +
+      `• View active listings count\n\n` +
       `*Privacy:* Your data is only stored while your listings are active.`;
     
     const helpButtons = Markup.inlineKeyboard([
@@ -262,6 +313,12 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
   });
 
   bot.action('back_to_menu', async (ctx) => {
+    await ctx.answerCbQuery();
+    await showMainMenu(ctx);
+  });
+
+  // Add refresh stats action handler
+  bot.action('refresh_stats', async (ctx) => {
     await ctx.answerCbQuery();
     await showMainMenu(ctx);
   });

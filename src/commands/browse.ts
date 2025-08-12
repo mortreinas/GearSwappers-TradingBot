@@ -40,6 +40,7 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
     let msg = `*${listing.title}*\n${listing.description}\n`;
     if (listing.price) msg += `\n💵 Price: ${listing.price}`;
     msg += `\n📍 Location: ${listing.location}`;
+    if (listing.marketplaceLink) msg += `\n🔗 [Marketplace Link](${listing.marketplaceLink})`;
     msg += `\n📞 Contact: ${listing.user.contact}`;
     msg += `\n\n📄 Page ${page + 1} of ${Math.ceil((await prisma.listing.count()) / PAGE_SIZE)}`;
     

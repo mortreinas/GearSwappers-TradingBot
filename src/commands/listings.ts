@@ -15,9 +15,10 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       
       if (!listings.length) {
         // Update the main message if it exists, otherwise send new one
-        if ((ctx.session as any).mainMessageId) {
+        if (ctx.session && (ctx.session as any).mainMessageId) {
           const noListingsText = `📭 *No Listings Found*\n\nBe the first to add one with /add! 🎸`;
           const noListingsButtons = Markup.inlineKeyboard([
+            [Markup.button.callback('➕ Add New Listing', 'add_listing')],
             [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
           ]).reply_markup;
           
@@ -50,7 +51,7 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       const listingsButtons = Markup.inlineKeyboard(buttons).reply_markup;
       
       // Update the main message if it exists, otherwise send new one
-      if ((ctx.session as any).mainMessageId) {
+      if (ctx.session && (ctx.session as any).mainMessageId) {
         await ctx.telegram.editMessageText(
           ctx.chat!.id,
           (ctx.session as any).mainMessageId,
@@ -60,6 +61,9 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
         );
       } else {
         const sent = await ctx.reply(listingsText, { reply_markup: listingsButtons });
+        if (!ctx.session) {
+          (ctx as any).session = {};
+        }
         (ctx.session as any).mainMessageId = sent.message_id;
       }
     } catch (error) {
@@ -69,7 +73,7 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
         [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
       ]).reply_markup;
       
-      if ((ctx.session as any).mainMessageId) {
+      if (ctx.session && (ctx.session as any).mainMessageId) {
         await ctx.telegram.editMessageText(
           ctx.chat!.id,
           (ctx.session as any).mainMessageId,
@@ -94,33 +98,62 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
         await ctx.answerCbQuery('Listing not found.');
         return;
       }
+      
       const photos = JSON.parse(listing.photos || '[]');
       let msg = `*${listing.title}*\n${listing.description}`;
       if (listing.price) msg += `\n💵 Price: ${listing.price}`;
       msg += `\n📍 Location: ${listing.location}`;
+      if (listing.marketplaceLink) msg += `\n🔗 [Marketplace Link](${listing.marketplaceLink})`;
       msg += `\n📞 Contact: ${listing.user.contact}`;
       
+      // Get all listings for navigation
+      const allListings = await prisma.listing.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: { id: true }
+      });
+      
+      const currentIndex = allListings.findIndex(l => l.id === listingId);
+      const hasNext = currentIndex > 0;
+      const hasPrev = currentIndex < allListings.length - 1;
+      
+      // Create navigation buttons
+      const navigationButtons = [];
+      if (hasPrev) {
+        navigationButtons.push(Markup.button.callback('⬅️ Previous', `show_listing_${allListings[currentIndex + 1].id}`));
+      }
+      if (hasNext) {
+        navigationButtons.push(Markup.button.callback('Next ➡️', `show_listing_${allListings[currentIndex - 1].id}`));
+      }
+      
+      const actionButtons = [
+        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
+      ];
+      
+      if (navigationButtons.length > 0) {
+        actionButtons.unshift(navigationButtons);
+      }
+      
+      const listingButtons = Markup.inlineKeyboard(actionButtons).reply_markup;
+      
+      // Send the listing with navigation buttons
       if (photos.length > 0) {
         // Show all photos in a grouped media message
         const mediaGroup = photos.map((fileId: string, i: number) => ({
           type: 'photo',
           media: fileId,
-          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown', reply_markup: listingButtons } : {})
         }));
         
         await ctx.replyWithMediaGroup(mediaGroup);
       } else {
-        // No photos, just show the text
-        await ctx.reply(msg, { parse_mode: 'Markdown' });
+        // No photos, just show the text with buttons
+        await ctx.reply(msg, { 
+          parse_mode: 'Markdown',
+          reply_markup: listingButtons
+        });
       }
-      await ctx.answerCbQuery();
       
-      // Add back to menu button after showing listing
-      await ctx.reply('What would you like to do next?', {
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-        ]).reply_markup
-      });
+      await ctx.answerCbQuery();
     } catch (error) {
       console.error('Error showing listing:', error);
       await ctx.answerCbQuery('Error loading listing details');

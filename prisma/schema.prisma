@@ -20,13 +20,14 @@ model User {
 }
 
 model Listing {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  title       String
-  description String
-  price       String?
-  location    String
-  photos      String   // stores JSON array of file_ids as a string
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id])
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  title           String
+  description     String
+  price           String?
+  location        String
+  marketplaceLink String?  // optional link to external marketplace
+  photos          String   // stores JSON array of file_ids as a string
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id])
 }

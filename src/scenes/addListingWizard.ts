@@ -9,8 +9,11 @@ const addListingSchema = z.object({
   price: z.string().max(50, "Price must be 50 characters or less").optional(),
   location: z.string().min(2, "Location must be at least 2 characters long").max(100, "Location must be 100 characters or less"),
   contact: z.string().min(2, "Contact must be at least 2 characters long").max(100, "Contact must be 100 characters or less"),
+  marketplaceLink: z.string().url("Please provide a valid URL").optional(),
   photos: z.array(z.string()).max(5, "Maximum 5 photos allowed"),
 });
+
+export { addListingSchema };
 
 export function addListingWizard(prisma: PrismaClient) {
   return new Scenes.WizardScene(
@@ -172,8 +175,9 @@ export function addListingWizard(prisma: PrismaClient) {
             return;
           }
           (ctx.session as any).addListing = { ...(ctx.session as any).addListing, contact: ctx.message.text, photos: [] };
-          const sent = await ctx.reply('Send up to 5 photos (send /done when finished):', {
+          const sent = await ctx.reply('Do you have a marketplace link (e.g., eBay, Reverb, etc.)? Send the URL or use the skip button:', {
             reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('⏭️ Skip Marketplace Link', 'skip_marketplace_link')],
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
@@ -196,26 +200,16 @@ export function addListingWizard(prisma: PrismaClient) {
       (ctx.session as any).wizardMessageIds.push(sent.message_id);
     },
     async (ctx: any) => {
-      if (ctx.message && 'photo' in ctx.message) {
-        const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-        (ctx.session as any).addListing.photos = (ctx.session as any).addListing.photos || [];
-        if ((ctx.session as any).addListing.photos.length < 5) {
-          (ctx.session as any).addListing.photos.push(fileId);
-          const sent = await ctx.reply(`📸 Photo ${(ctx.session as any).addListing.photos.length}/5 received. Send more or /done.`, {
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback('❌ Cancel', 'cancel_listing')]
-            ]).reply_markup
-          });
-          (ctx.session as any).wizardMessageIds.push(sent.message_id);
-        } else {
-          const sent = await ctx.reply('📸 You have reached the maximum of 5 photos. Send /done to finish.', {
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback('❌ Cancel', 'cancel_listing')]
-            ]).reply_markup
-          });
-          (ctx.session as any).wizardMessageIds.push(sent.message_id);
-        }
-        return;
+      if (ctx.message && 'text' in ctx.message) {
+        const marketplaceLink = ctx.message.text.trim();
+        (ctx.session as any).addListing = { ...(ctx.session as any).addListing, marketplaceLink };
+        const sent = await ctx.reply('Send up to 5 photos (send /done when finished):', {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('❌ Cancel', 'cancel_listing')]
+          ]).reply_markup
+        });
+        (ctx.session as any).wizardMessageIds.push(sent.message_id);
+        return ctx.wizard.next();
       }
       if (ctx.message && 'text' in ctx.message && ctx.message.text === '/done') {
         // Validate and save
@@ -245,20 +239,30 @@ export function addListingWizard(prisma: PrismaClient) {
               description: data.description,
               price: data.price,
               location: data.location,
+              marketplaceLink: data.marketplaceLink,
               photos: JSON.stringify(data.photos),
             },
           });
           console.log('Listing created:', listing);
           
-          // Success message
-          const successSent = await ctx.reply('🎉 Your listing has been added successfully!');
+          // Success message with options
+          const successSent = await ctx.reply('🎉 Your listing has been added successfully!', {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('🧹 Clean Up & New Menu', 'cleanup_and_menu')],
+              [Markup.button.callback('🔙 Return to Menu', 'return_to_menu')],
+              [Markup.button.callback('💬 Keep Conversation', 'keep_conversation')]
+            ]).reply_markup
+          });
           
-          // Clean up all wizard messages
-          await cleanupWizardMessages(ctx);
+          // Store the success message ID for potential cleanup
+          (ctx.session as any).wizardMessageIds.push(successSent.message_id);
           
-          // Return to main menu
-          const { showMainMenu } = require('../commands/start');
-          await showMainMenu(ctx);
+          // Don't auto-cleanup, let user choose
+          // await cleanupWizardMessages(ctx);
+          
+          // Don't auto-return to menu, let user choose
+          // const { showMainMenu } = require('../commands/start');
+          // await showMainMenu(ctx);
           
         } catch (e) {
           console.error('Error saving listing:', e);
@@ -273,8 +277,32 @@ export function addListingWizard(prisma: PrismaClient) {
         }
         return ctx.scene.leave();
       }
-      const sent = await ctx.reply('Send a photo or /done to finish.', {
+      if (ctx.message && 'photo' in ctx.message) {
+        const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+        (ctx.session as any).addListing.photos = (ctx.session as any).addListing.photos || [];
+        if ((ctx.session as any).addListing.photos.length < 5) {
+          (ctx.session as any).addListing.photos.push(fileId);
+          const sent = await ctx.reply(`📸 Photo ${(ctx.session as any).addListing.photos.length}/5 received. Send more or complete:`, {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('✅ Complete Listing', 'complete_listing')],
+              [Markup.button.callback('❌ Cancel', 'cancel_listing')]
+            ]).reply_markup
+          });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
+        } else {
+          const sent = await ctx.reply('📸 You have reached the maximum of 5 photos. Complete your listing:', {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('✅ Complete Listing', 'complete_listing')],
+              [Markup.button.callback('❌ Cancel', 'cancel_listing')]
+            ]).reply_markup
+          });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
+        }
+        return;
+      }
+      const sent = await ctx.reply('Send a photo or complete your listing:', {
         reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('✅ Complete Listing', 'complete_listing')],
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });

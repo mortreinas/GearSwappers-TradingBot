@@ -1,4 +1,4 @@
-import { Context } from 'telegraf';
+import { Context, Scenes } from 'telegraf';
 
 export interface SessionData {
   cursor: number;
@@ -10,11 +10,10 @@ export interface SessionData {
     contact?: string;
     photos?: string[];
   };
+  mainMessageId?: number;
+  wizardMessageIds?: number[];
 }
 
-export interface BotContext extends Context {
-  session: SessionData;
-  scene: any;
-  wizard: any;
+export interface BotContext extends Scenes.WizardContext<SessionData> {
   prisma: any; // Will be injected via middleware
 } 
