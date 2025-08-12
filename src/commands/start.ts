@@ -23,27 +23,6 @@ export async function showMainMenu(ctx: BotContext) {
 }
 
 export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaClient) {
-  // Welcome new users automatically
-  bot.on('new_chat_members', async (ctx) => {
-    if (ctx.chat?.type !== 'private') return;
-    
-    // Check if the new member is the bot itself
-    const newMember = ctx.message.new_chat_members[0];
-    if (newMember.is_bot && newMember.id === ctx.botInfo?.id) {
-      await ctx.reply(
-        `🎸 *Welcome to GearTrader!*\n\n` +
-        `This bot helps you trade musical gear (no money involved).\n\n` +
-        `🔒 *Privacy Notice:*\n` +
-        `Your contact info and user data are stored *only while your listing is live*.\n` +
-        `As soon as you delete your last listing, all your data is permanently deleted.\n` +
-        `No personal information is retained longer than necessary.\n\n` +
-        `Here's your main menu:`,
-        { parse_mode: 'Markdown' }
-      );
-      await showMainMenu(ctx);
-    }
-  });
-
   // Start command shows welcome message and main menu
   bot.start(async (ctx) => {
     if (ctx.chat?.type !== 'private') return;
@@ -66,21 +45,6 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
   bot.command('menu', async (ctx) => {
     if (ctx.chat?.type !== 'private') return;
     await showMainMenu(ctx);
-  });
-
-  // Catch-all message handler - show menu for any text message
-  bot.on('text', async (ctx) => {
-    if (ctx.chat?.type !== 'private') return;
-    
-    // If it's not a command, show the main menu
-    if (!ctx.message.text.startsWith('/')) {
-      await ctx.reply(
-        `🎸 *Welcome to GearTrader!*\n\n` +
-        `Here's what you can do:`,
-        { parse_mode: 'Markdown' }
-      );
-      await showMainMenu(ctx);
-    }
   });
 
   // Handle menu button actions
