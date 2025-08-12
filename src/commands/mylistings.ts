@@ -2,9 +2,59 @@ import { Telegraf, Markup, Scenes } from 'telegraf';
 import { PrismaClient } from '../../prisma-client';
 import { BotContext } from '../types/context';
 
+// Helper function to clean up old bot messages and start fresh
+async function cleanBotMessages(ctx: BotContext) {
+  try {
+    // Clear session data
+    if (ctx.session) {
+      (ctx.session as any).mainMessageId = undefined;
+      (ctx.session as any).wizardMessageIds = [];
+      (ctx.session as any).navigationMessageId = undefined;
+    }
+    
+    // Try to delete the main message if it exists
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat!.id, (ctx.session as any).mainMessageId);
+      } catch (error) {
+        console.log('Could not delete main message:', error);
+      }
+    }
+    
+    // Try to delete navigation message if it exists
+    if (ctx.session && (ctx.session as any).navigationMessageId) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat!.id, (ctx.session as any).navigationMessageId);
+      } catch (error) {
+        console.log('Could not delete navigation message:', error);
+      }
+    }
+    
+    // Try to delete wizard messages if they exist
+    if (ctx.session && (ctx.session as any).wizardMessageIds) {
+      for (const messageId of (ctx.session as any).wizardMessageIds) {
+        try {
+          await ctx.telegram.deleteMessage(ctx.chat!.id, messageId);
+        } catch (error) {
+          console.log('Could not delete wizard message:', error);
+        }
+      }
+      (ctx.session as any).wizardMessageIds = [];
+    }
+    
+    console.log('Cleaned up old bot messages');
+  } catch (error) {
+    console.error('Error cleaning bot messages:', error);
+  }
+}
+
 export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
   try {
     if (ctx.chat?.type !== 'private') return;
+    
+    // Clean slate: Delete old bot messages and start fresh
+    await cleanBotMessages(ctx);
+    
     const user = await prisma.user.findUnique({ where: { telegramId: String(ctx.from?.id) }, include: { listings: true } });
     if (!user || !user.listings.length) {
       const noListingsText = `📦 *My Listings*\n\nYou have no listings.`;
@@ -13,35 +63,16 @@ export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
         [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
       ]).reply_markup;
       
-      if (ctx.session && (ctx.session as any).mainMessageId) {
-        try {
-          await ctx.telegram.editMessageText(
-            ctx.chat!.id,
-            (ctx.session as any).mainMessageId,
-            undefined,
-            noListingsText,
-            { parse_mode: 'Markdown', reply_markup: noListingsButtons }
-          );
-        } catch (error: any) {
-          if (error.description?.includes('message is not modified')) {
-            console.log('Message content unchanged, skipping edit');
-          } else {
-            console.error('Error editing no listings message:', error);
-            // Fallback to sending new message
-            const sent = await ctx.reply(noListingsText, { 
-              parse_mode: 'Markdown', 
-              reply_markup: noListingsButtons 
-            });
-            (ctx.session as any).mainMessageId = sent.message_id;
-          }
-        }
-      } else {
-        const sent = await ctx.reply(noListingsText, { 
-          parse_mode: 'Markdown', 
-          reply_markup: noListingsButtons 
-        });
-        (ctx.session as any).mainMessageId = sent.message_id;
-      }
+      // Always send a fresh message with interactive menu
+      const sent = await ctx.reply(noListingsText, { 
+        parse_mode: 'Markdown', 
+        reply_markup: noListingsButtons 
+      });
+      
+      // Store this as the main interactive message
+      if (!ctx.session) (ctx as any).session = {};
+      (ctx.session as any).mainMessageId = sent.message_id;
+      
       if (ctx.callbackQuery) await ctx.answerCbQuery();
       return;
     }
@@ -56,38 +87,19 @@ export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
     listingButtons.push([Markup.button.callback('➕ Add New Listing', 'add_listing')]);
     listingButtons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
     
+    // Always send a fresh interactive menu as the LAST message
     const myListingsText = `📦 *My Listings*\n\nManage your ${user.listings.length} listing(s):`;
     const myListingsButtons = Markup.inlineKeyboard(listingButtons).reply_markup;
     
-    if (ctx.session && (ctx.session as any).mainMessageId) {
-      try {
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          myListingsText,
-          { parse_mode: 'Markdown', reply_markup: myListingsButtons }
-        );
-      } catch (error: any) {
-        if (error.description?.includes('message is not modified')) {
-          console.log('Message content unchanged, skipping edit');
-        } else {
-          console.error('Error editing message:', error);
-          // Fallback to sending new message
-          const sent = await ctx.reply(myListingsText, { 
-            parse_mode: 'Markdown', 
-            reply_markup: myListingsButtons 
-          });
-          (ctx.session as any).mainMessageId = sent.message_id;
-        }
-      }
-    } else {
-      const sent = await ctx.reply(myListingsText, { 
-        parse_mode: 'Markdown', 
-        reply_markup: myListingsButtons 
-      });
-      (ctx.session as any).mainMessageId = sent.message_id;
-    }
+    // Send new message with the interactive menu
+    const sent = await ctx.reply(myListingsText, { 
+      parse_mode: 'Markdown', 
+      reply_markup: myListingsButtons 
+    });
+    
+    // Store this as the main interactive message
+    if (!ctx.session) (ctx as any).session = {};
+    (ctx.session as any).mainMessageId = sent.message_id;
     
     if (ctx.callbackQuery) await ctx.answerCbQuery();
   } catch (error) {
@@ -97,35 +109,15 @@ export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
       [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
     ]).reply_markup;
     
-    if (ctx.session && (ctx.session as any).mainMessageId) {
-      try {
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          errorText,
-          { parse_mode: 'Markdown', reply_markup: errorButtons }
-        );
-      } catch (error: any) {
-        if (error.description?.includes('message is not modified')) {
-          console.log('Message content unchanged, skipping edit');
-        } else {
-          console.error('Error editing error message:', error);
-          // Fallback to sending new message
-          const sent = await ctx.reply(errorText, { 
-            parse_mode: 'Markdown', 
-            reply_markup: errorButtons 
-          });
-          (ctx.session as any).mainMessageId = sent.message_id;
-        }
-      }
-    } else {
-      const sent = await ctx.reply(errorText, { 
-        parse_mode: 'Markdown', 
-        reply_markup: errorButtons 
-      });
-      (ctx.session as any).mainMessageId = sent.message_id;
-    }
+    // Always send a fresh error message with interactive menu
+    const sent = await ctx.reply(errorText, { 
+      parse_mode: 'Markdown', 
+      reply_markup: errorButtons 
+    });
+    
+    // Store this as the main interactive message
+    if (!ctx.session) (ctx as any).session = {};
+    (ctx.session as any).mainMessageId = sent.message_id;
   }
 }
 

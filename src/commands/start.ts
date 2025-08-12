@@ -5,6 +5,52 @@ import { handleBrowseListings } from './browse';
 import { handleMyListings } from './mylistings';
 import { BotContext } from '../types/context';
 
+// Helper function to clean up old bot messages and start fresh
+async function cleanBotMessages(ctx: BotContext) {
+  try {
+    // Clear session data
+    if (ctx.session) {
+      (ctx.session as any).mainMessageId = undefined;
+      (ctx.session as any).wizardMessageIds = [];
+      (ctx.session as any).navigationMessageId = undefined;
+    }
+    
+    // Try to delete the main message if it exists
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat!.id, (ctx.session as any).mainMessageId);
+      } catch (error) {
+        console.log('Could not delete main message:', error);
+      }
+    }
+    
+    // Try to delete navigation message if it exists
+    if (ctx.session && (ctx.session as any).navigationMessageId) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat!.id, (ctx.session as any).navigationMessageId);
+      } catch (error) {
+        console.log('Could not delete navigation message:', error);
+      }
+    }
+    
+    // Try to delete wizard messages if they exist
+    if (ctx.session && (ctx.session as any).wizardMessageIds) {
+      for (const messageId of (ctx.session as any).wizardMessageIds) {
+        try {
+          await ctx.telegram.deleteMessage(ctx.chat!.id, messageId);
+        } catch (error) {
+          console.log('Could not delete wizard message:', error);
+        }
+      }
+      (ctx.session as any).wizardMessageIds = [];
+    }
+    
+    console.log('Cleaned up old bot messages');
+  } catch (error) {
+    console.error('Error cleaning bot messages:', error);
+  }
+}
+
 // Main menu function that can be called from anywhere
 export async function showMainMenu(ctx: BotContext) {
   try {
@@ -109,11 +155,8 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
     if (ctx.chat?.type !== 'private') return;
     
     try {
-      // Clear any existing mainMessageId from session
-      if (ctx.session) {
-        (ctx.session as any).mainMessageId = undefined;
-        (ctx.session as any).wizardMessageIds = [];
-      }
+      // Clean slate: Delete old bot messages and start fresh
+      await cleanBotMessages(ctx);
       
       // Send welcome message
       await ctx.reply(
@@ -126,7 +169,7 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
         { parse_mode: 'Markdown' }
       );
       
-      // Show the main menu (this will be the main updatable message)
+      // Always send the main menu as the LAST message
       await showMainMenu(ctx);
     } catch (error) {
       console.error('Error in start command:', error);
@@ -139,7 +182,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
   // Menu command to show main menu anytime
   bot.command('menu', async (ctx) => {
     if (ctx.chat?.type !== 'private') return;
-    await showMainMenu(ctx);
+    
+    try {
+      // Clean slate: Delete old bot messages and start fresh
+      await cleanBotMessages(ctx);
+      
+      // Always send the main menu as the LAST message
+      await showMainMenu(ctx);
+    } catch (error) {
+      console.error('Error in menu command:', error);
+      await showMainMenu(ctx);
+    }
   });
 
   // Handle menu button actions

@@ -3,15 +3,63 @@ import { PrismaClient } from '../../prisma-client';
 import { BotContext } from '../types/context';
 import { showMainMenu } from './start';
 
+// Helper function to clean up old bot messages and start fresh
+async function cleanBotMessages(ctx: BotContext) {
+  try {
+    // Clear session data
+    if (ctx.session) {
+      (ctx.session as any).mainMessageId = undefined;
+      (ctx.session as any).wizardMessageIds = [];
+      (ctx.session as any).navigationMessageId = undefined;
+    }
+    
+    // Try to delete the main message if it exists
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat!.id, (ctx.session as any).mainMessageId);
+      } catch (error) {
+        console.log('Could not delete main message:', error);
+      }
+    }
+    
+    // Try to delete navigation message if it exists
+    if (ctx.session && (ctx.session as any).navigationMessageId) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat!.id, (ctx.session as any).navigationMessageId);
+      } catch (error) {
+        console.log('Could not delete navigation message:', error);
+      }
+    }
+    
+    // Try to delete wizard messages if they exist
+    if (ctx.session && (ctx.session as any).wizardMessageIds) {
+      for (const messageId of (ctx.session as any).wizardMessageIds) {
+        try {
+          await ctx.telegram.deleteMessage(ctx.chat!.id, messageId);
+        } catch (error) {
+          console.log('Could not delete wizard message:', error);
+        }
+      }
+      (ctx.session as any).wizardMessageIds = [];
+    }
+    
+    console.log('Cleaned up old bot messages');
+  } catch (error) {
+    console.error('Error cleaning bot messages:', error);
+  }
+}
+
 const PAGE_SIZE = 3;
 
-export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient, page = 0) {
+export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient) {
   try {
-    console.log('sendListings called, page:', page);
+    if (ctx.chat?.type !== 'private') return;
+    
+    // Clean slate: Delete old bot messages and start fresh
+    await cleanBotMessages(ctx);
+    
     const listings = await prisma.listing.findMany({
       orderBy: { createdAt: 'desc' },
-      skip: page * PAGE_SIZE,
-      take: PAGE_SIZE,
       include: { user: true },
     });
     if (!listings.length) {
@@ -20,17 +68,15 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
         [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
       ]).reply_markup;
       
-      if ((ctx.session as any).mainMessageId) {
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          noListingsText,
-          { parse_mode: 'Markdown', reply_markup: noListingsButtons }
-        );
-      } else {
-        await ctx.reply(noListingsText, { reply_markup: noListingsButtons });
-      }
+      // Always send a fresh message with interactive menu
+      const sent = await ctx.reply(noListingsText, { 
+        parse_mode: 'Markdown', 
+        reply_markup: noListingsButtons 
+      });
+      
+      // Store this as the main interactive message
+      if (!ctx.session) (ctx as any).session = {};
+      (ctx.session as any).mainMessageId = sent.message_id;
       return;
     }
     
@@ -54,65 +100,24 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
     
     const replyMarkup = Markup.inlineKeyboard(actionButtons).reply_markup;
     
-    // Edit the main message to show the listing
-    if (ctx.session && (ctx.session as any).mainMessageId) {
-      try {
-        if (photos.length > 0) {
-          // For photos, we need to send a new message since we can't edit media groups
-          // But we'll update the main message text to show we're browsing
-          await ctx.telegram.editMessageText(
-            ctx.chat!.id,
-            (ctx.session as any).mainMessageId,
-            undefined,
-            `🎛 *Browsing Listings*\n\nPage ${page + 1}`,
-            { parse_mode: 'Markdown', reply_markup: replyMarkup }
-          );
-          
-          // Send the photos as a separate media group
-          const mediaGroup = photos.map((fileId: string, i: number) => ({
-            type: 'photo', media: fileId,
-            ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
-          }));
-          await ctx.replyWithMediaGroup(mediaGroup);
-        } else {
-          // No photos, just edit the main message
-          await ctx.telegram.editMessageText(
-            ctx.chat!.id,
-            (ctx.session as any).mainMessageId,
-            undefined,
-            msg,
-            { parse_mode: 'Markdown', reply_markup: replyMarkup }
-          );
-        }
-      } catch (error: any) {
-        if (error.description?.includes('message is not modified')) {
-          console.log('Message content unchanged, skipping edit');
-        } else {
-          console.error('Error editing message:', error);
-          // Fallback to sending new message
-          if (photos.length > 0) {
-            const mediaGroup = photos.map((fileId: string, i: number) => ({
-              type: 'photo', media: fileId,
-              ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
-            }));
-            await ctx.replyWithMediaGroup(mediaGroup);
-          } else {
-            await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: replyMarkup });
-          }
-        }
-      }
+    // Show the listing with photos first (can't be edited)
+    if (photos.length > 0) {
+      const mediaGroup = photos.map((fileId: string, i: number) => ({
+        type: 'photo', media: fileId,
+        ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+      }));
+      await ctx.replyWithMediaGroup(mediaGroup);
     } else {
-      // No main message to edit, send new one
-      if (photos.length > 0) {
-        const mediaGroup = photos.map((fileId: string, i: number) => ({
-          type: 'photo', media: fileId,
-          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
-        }));
-        await ctx.replyWithMediaGroup(mediaGroup);
-      } else {
-        await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: replyMarkup });
-      }
+      // No photos, just send the listing text
+      await ctx.reply(msg, { parse_mode: 'Markdown' });
     }
+    
+    // Always send a fresh interactive navigation menu as the LAST message
+    const navigationMessage = await ctx.reply('Navigation:', { reply_markup: replyMarkup });
+    
+    // Store this navigation message ID for future editing
+    if (!ctx.session) (ctx as any).session = {};
+    (ctx.session as any).navigationMessageId = navigationMessage.message_id;
   } catch (error) {
     console.error('Error in handleBrowseListings:', error);
     const errorText = `❌ *Error*\n\nSorry, there was an error loading the listings. Please try again.`;
@@ -120,17 +125,15 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
       [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
     ]).reply_markup;
     
-    if ((ctx.session as any).mainMessageId) {
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        errorText,
-        { parse_mode: 'Markdown', reply_markup: errorButtons }
-      );
-    } else {
-      await ctx.reply(errorText, { reply_markup: errorButtons });
-    }
+    // Always send a fresh error message with interactive menu
+    const sent = await ctx.reply(errorText, { 
+      parse_mode: 'Markdown', 
+      reply_markup: errorButtons 
+    });
+    
+    // Store this as the main interactive message
+    if (!ctx.session) (ctx as any).session = {};
+    (ctx.session as any).mainMessageId = sent.message_id;
   }
 }
 
