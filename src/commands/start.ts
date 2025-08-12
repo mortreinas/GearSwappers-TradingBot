@@ -16,7 +16,7 @@ export async function showMainMenu(ctx: BotContext) {
   ]).reply_markup;
 
   // If we have a main message to update, edit it
-  if ((ctx.session as any).mainMessageId) {
+  if (ctx.session && (ctx.session as any).mainMessageId) {
     try {
       await ctx.telegram.editMessageText(
         ctx.chat!.id,
@@ -36,6 +36,11 @@ export async function showMainMenu(ctx: BotContext) {
     parse_mode: 'Markdown',
     reply_markup: menuButtons
   });
+  
+  // Initialize session if it doesn't exist
+  if (!ctx.session) {
+    (ctx as any).session = {};
+  }
   (ctx.session as any).mainMessageId = sent.message_id;
 }
 
@@ -83,13 +88,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
           [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
         ]).reply_markup;
         
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          noListingsText,
-          { parse_mode: 'Markdown', reply_markup: noListingsButtons }
-        );
+        if (ctx.session && (ctx.session as any).mainMessageId) {
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            noListingsText,
+            { parse_mode: 'Markdown', reply_markup: noListingsButtons }
+          );
+        } else {
+          await ctx.reply(noListingsText, { reply_markup: noListingsButtons });
+        }
         return;
       }
       
@@ -105,13 +114,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
       const listingsText = `📋 *Available Listings*\n\nFound ${listings.length} listings. Select one to view details:`;
       const listingsButtons = Markup.inlineKeyboard(buttons).reply_markup;
       
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        listingsText,
-        { parse_mode: 'Markdown', reply_markup: listingsButtons }
-      );
+      if (ctx.session && (ctx.session as any).mainMessageId) {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          listingsText,
+          { parse_mode: 'Markdown', reply_markup: listingsButtons }
+        );
+      } else {
+        await ctx.reply(listingsText, { reply_markup: listingsButtons });
+      }
     } catch (error) {
       console.error('Error loading listings:', error);
       const errorText = `❌ *Error*\n\nSorry, there was an error loading the listings. Please try again.`;
@@ -119,13 +132,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
         [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
       ]).reply_markup;
       
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        errorText,
-        { parse_mode: 'Markdown', reply_markup: errorButtons }
-      );
+      if (ctx.session && (ctx.session as any).mainMessageId) {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          errorText,
+          { parse_mode: 'Markdown', reply_markup: errorButtons }
+        );
+      } else {
+        await ctx.reply(errorText, { reply_markup: errorButtons });
+      }
     }
   });
 
@@ -150,13 +167,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
           [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
         ]).reply_markup;
         
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          noListingsText,
-          { parse_mode: 'Markdown', reply_markup: noListingsButtons }
-        );
+        if (ctx.session && (ctx.session as any).mainMessageId) {
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            noListingsText,
+            { parse_mode: 'Markdown', reply_markup: noListingsButtons }
+          );
+        } else {
+          await ctx.reply(noListingsText, { reply_markup: noListingsButtons });
+        }
         return;
       }
       
@@ -173,13 +194,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
       const myListingsText = `📦 *My Listings*\n\nManage your ${user.listings.length} listing(s):`;
       const myListingsButtons = Markup.inlineKeyboard(listingButtons).reply_markup;
       
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        myListingsText,
-        { parse_mode: 'Markdown', reply_markup: myListingsButtons }
-      );
+      if (ctx.session && (ctx.session as any).mainMessageId) {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          myListingsText,
+          { parse_mode: 'Markdown', reply_markup: myListingsButtons }
+        );
+      } else {
+        await ctx.reply(myListingsText, { reply_markup: myListingsButtons });
+      }
     } catch (error) {
       console.error('Error loading my listings:', error);
       const errorText = `❌ *Error*\n\nSorry, there was an error loading your listings. Please try again.`;
@@ -187,13 +212,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
         [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
       ]).reply_markup;
       
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        errorText,
-        { parse_mode: 'Markdown', reply_markup: errorButtons }
-      );
+      if (ctx.session && (ctx.session as any).mainMessageId) {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          errorText,
+          { parse_mode: 'Markdown', reply_markup: errorButtons }
+        );
+      } else {
+        await ctx.reply(errorText, { reply_markup: errorButtons });
+      }
     }
   });
 
@@ -219,13 +248,17 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
       [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
     ]).reply_markup;
     
-    await ctx.telegram.editMessageText(
-      ctx.chat!.id,
-      (ctx.session as any).mainMessageId,
-      undefined,
-      helpText,
-      { parse_mode: 'Markdown', reply_markup: helpButtons }
-    );
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        (ctx.session as any).mainMessageId,
+        undefined,
+        helpText,
+        { parse_mode: 'Markdown', reply_markup: helpButtons }
+      );
+    } else {
+      await ctx.reply(helpText, { reply_markup: helpButtons });
+    }
   });
 
   bot.action('back_to_menu', async (ctx) => {
