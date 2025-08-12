@@ -135,8 +135,10 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       if (hasPrev) { navigationButtons.push(Markup.button.callback('⬅️ Previous', `show_listing_${allListings[currentIndex + 1].id}`)); }
       if (hasNext) { navigationButtons.push(Markup.button.callback('Next ➡️', `show_listing_${allListings[currentIndex - 1].id}`)); }
       
-      const actionButtons = [[Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]];
-      if (navigationButtons.length > 0) { actionButtons.unshift(navigationButtons); }
+      const actionButtons = [];
+      if (navigationButtons.length > 0) actionButtons.push(navigationButtons);
+      actionButtons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
+      
       const listingButtons = Markup.inlineKeyboard(actionButtons).reply_markup;
       
       // Edit the main message to show the listing

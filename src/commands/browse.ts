@@ -47,9 +47,12 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
     const buttons = [];
     if (page > 0) buttons.push(Markup.button.callback('⬅️ Previous', `browse_${page - 1}`));
     if (page < Math.ceil((await prisma.listing.count()) / PAGE_SIZE) - 1) buttons.push(Markup.button.callback('Next ➡️', `browse_${page + 1}`));
-    buttons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
     
-    const replyMarkup = Markup.inlineKeyboard(buttons).reply_markup;
+    const actionButtons = [];
+    if (buttons.length > 0) actionButtons.push(buttons);
+    actionButtons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
+    
+    const replyMarkup = Markup.inlineKeyboard(actionButtons).reply_markup;
     
     // Edit the main message to show the listing
     if (ctx.session && (ctx.session as any).mainMessageId) {
