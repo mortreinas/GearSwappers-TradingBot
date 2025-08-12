@@ -13,16 +13,34 @@ export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
         [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
       ]).reply_markup;
       
-      if ((ctx.session as any).mainMessageId) {
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          noListingsText,
-          { parse_mode: 'Markdown', reply_markup: noListingsButtons }
-        );
+      if (ctx.session && (ctx.session as any).mainMessageId) {
+        try {
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            noListingsText,
+            { parse_mode: 'Markdown', reply_markup: noListingsButtons }
+          );
+        } catch (error: any) {
+          if (error.description?.includes('message is not modified')) {
+            console.log('Message content unchanged, skipping edit');
+          } else {
+            console.error('Error editing no listings message:', error);
+            // Fallback to sending new message
+            const sent = await ctx.reply(noListingsText, { 
+              parse_mode: 'Markdown', 
+              reply_markup: noListingsButtons 
+            });
+            (ctx.session as any).mainMessageId = sent.message_id;
+          }
+        }
       } else {
-        await ctx.reply(noListingsText, { reply_markup: noListingsButtons });
+        const sent = await ctx.reply(noListingsText, { 
+          parse_mode: 'Markdown', 
+          reply_markup: noListingsButtons 
+        });
+        (ctx.session as any).mainMessageId = sent.message_id;
       }
       if (ctx.callbackQuery) await ctx.answerCbQuery();
       return;
@@ -41,16 +59,34 @@ export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
     const myListingsText = `📦 *My Listings*\n\nManage your ${user.listings.length} listing(s):`;
     const myListingsButtons = Markup.inlineKeyboard(listingButtons).reply_markup;
     
-    if ((ctx.session as any).mainMessageId) {
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        myListingsText,
-        { parse_mode: 'Markdown', reply_markup: myListingsButtons }
-      );
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          myListingsText,
+          { parse_mode: 'Markdown', reply_markup: myListingsButtons }
+        );
+      } catch (error: any) {
+        if (error.description?.includes('message is not modified')) {
+          console.log('Message content unchanged, skipping edit');
+        } else {
+          console.error('Error editing message:', error);
+          // Fallback to sending new message
+          const sent = await ctx.reply(myListingsText, { 
+            parse_mode: 'Markdown', 
+            reply_markup: myListingsButtons 
+          });
+          (ctx.session as any).mainMessageId = sent.message_id;
+        }
+      }
     } else {
-      await ctx.reply(myListingsText, { reply_markup: myListingsButtons });
+      const sent = await ctx.reply(myListingsText, { 
+        parse_mode: 'Markdown', 
+        reply_markup: myListingsButtons 
+      });
+      (ctx.session as any).mainMessageId = sent.message_id;
     }
     
     if (ctx.callbackQuery) await ctx.answerCbQuery();
@@ -61,16 +97,34 @@ export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
       [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
     ]).reply_markup;
     
-    if ((ctx.session as any).mainMessageId) {
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        errorText,
-        { parse_mode: 'Markdown', reply_markup: errorButtons }
-      );
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          errorText,
+          { parse_mode: 'Markdown', reply_markup: errorButtons }
+        );
+      } catch (error: any) {
+        if (error.description?.includes('message is not modified')) {
+          console.log('Message content unchanged, skipping edit');
+        } else {
+          console.error('Error editing error message:', error);
+          // Fallback to sending new message
+          const sent = await ctx.reply(errorText, { 
+            parse_mode: 'Markdown', 
+            reply_markup: errorButtons 
+          });
+          (ctx.session as any).mainMessageId = sent.message_id;
+        }
+      }
     } else {
-      await ctx.reply(errorText, { reply_markup: errorButtons });
+      const sent = await ctx.reply(errorText, { 
+        parse_mode: 'Markdown', 
+        reply_markup: errorButtons 
+      });
+      (ctx.session as any).mainMessageId = sent.message_id;
     }
   }
 }

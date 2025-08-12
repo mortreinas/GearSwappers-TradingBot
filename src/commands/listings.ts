@@ -47,23 +47,38 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       // Add back to menu button
       buttons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
       
+      // Update the main message to show listings
       const listingsText = `📋 *Available Listings*\n\nFound ${listings.length} listings. Select one to view details:`;
       const listingsButtons = Markup.inlineKeyboard(buttons).reply_markup;
       
-      // Update the main message if it exists, otherwise send new one
       if (ctx.session && (ctx.session as any).mainMessageId) {
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          listingsText,
-          { parse_mode: 'Markdown', reply_markup: listingsButtons }
-        );
-      } else {
-        const sent = await ctx.reply(listingsText, { reply_markup: listingsButtons });
-        if (!ctx.session) {
-          (ctx as any).session = {};
+        try {
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            listingsText,
+            { parse_mode: 'Markdown', reply_markup: listingsButtons }
+          );
+        } catch (error: any) {
+          if (error.description?.includes('message is not modified')) {
+            // Message content is the same, no need to edit
+            console.log('Message content unchanged, skipping edit');
+          } else {
+            console.error('Error editing message:', error);
+            // Fallback to sending new message
+            const sent = await ctx.reply(listingsText, { 
+              parse_mode: 'Markdown', 
+              reply_markup: listingsButtons 
+            });
+            (ctx.session as any).mainMessageId = sent.message_id;
+          }
         }
+      } else {
+        const sent = await ctx.reply(listingsText, { 
+          parse_mode: 'Markdown', 
+          reply_markup: listingsButtons 
+        });
         (ctx.session as any).mainMessageId = sent.message_id;
       }
     } catch (error) {
@@ -89,13 +104,17 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
 
   // Show full description and photos when a button is clicked
   bot.action(/show_listing_(\d+)/, async (ctx) => {
+    await ctx.answerCbQuery();
+    
     try {
-      const listingId = parseInt(ctx.match[1], 10);
-      console.log(`Showing listing ${listingId}`);
+      const listingId = parseInt(ctx.match[1]);
+      const listing = await prisma.listing.findUnique({
+        where: { id: listingId },
+        include: { user: true }
+      });
       
-      const listing = await prisma.listing.findUnique({ where: { id: listingId }, include: { user: true } });
       if (!listing) {
-        await ctx.answerCbQuery('Listing not found.');
+        await ctx.reply('❌ Listing not found.');
         return;
       }
       
@@ -106,57 +125,82 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       if (listing.marketplaceLink) msg += `\n🔗 [Marketplace Link](${listing.marketplaceLink})`;
       msg += `\n📞 Contact: ${listing.user.contact}`;
       
-      // Get all listings for navigation
-      const allListings = await prisma.listing.findMany({
-        orderBy: { createdAt: 'desc' },
-        select: { id: true }
-      });
-      
+      // Get navigation info
+      const allListings = await prisma.listing.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true } });
       const currentIndex = allListings.findIndex(l => l.id === listingId);
       const hasNext = currentIndex > 0;
       const hasPrev = currentIndex < allListings.length - 1;
       
-      // Create navigation buttons
       const navigationButtons = [];
-      if (hasPrev) {
-        navigationButtons.push(Markup.button.callback('⬅️ Previous', `show_listing_${allListings[currentIndex + 1].id}`));
-      }
-      if (hasNext) {
-        navigationButtons.push(Markup.button.callback('Next ➡️', `show_listing_${allListings[currentIndex - 1].id}`));
-      }
+      if (hasPrev) { navigationButtons.push(Markup.button.callback('⬅️ Previous', `show_listing_${allListings[currentIndex + 1].id}`)); }
+      if (hasNext) { navigationButtons.push(Markup.button.callback('Next ➡️', `show_listing_${allListings[currentIndex - 1].id}`)); }
       
-      const actionButtons = [
-        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
-      ];
-      
-      if (navigationButtons.length > 0) {
-        actionButtons.unshift(navigationButtons);
-      }
-      
+      const actionButtons = [[Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]];
+      if (navigationButtons.length > 0) { actionButtons.unshift(navigationButtons); }
       const listingButtons = Markup.inlineKeyboard(actionButtons).reply_markup;
       
-      // Send the listing with navigation buttons
-      if (photos.length > 0) {
-        // Show all photos in a grouped media message
-        const mediaGroup = photos.map((fileId: string, i: number) => ({
-          type: 'photo',
-          media: fileId,
-          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown', reply_markup: listingButtons } : {})
-        }));
-        
-        await ctx.replyWithMediaGroup(mediaGroup);
+      // Edit the main message to show the listing
+      if (ctx.session && (ctx.session as any).mainMessageId) {
+        try {
+          if (photos.length > 0) {
+            // For photos, we need to send a new message since we can't edit media groups
+            // But we'll update the main message text to show we're viewing a listing
+            await ctx.telegram.editMessageText(
+              ctx.chat!.id,
+              (ctx.session as any).mainMessageId,
+              undefined,
+              `📋 *Viewing Listing*\n\n${listing.title}`,
+              { parse_mode: 'Markdown', reply_markup: listingButtons }
+            );
+            
+            // Send the photos as a separate media group
+            const mediaGroup = photos.map((fileId: string, i: number) => ({
+              type: 'photo', media: fileId,
+              ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+            }));
+            await ctx.replyWithMediaGroup(mediaGroup);
+          } else {
+            // No photos, just edit the main message
+            await ctx.telegram.editMessageText(
+              ctx.chat!.id,
+              (ctx.session as any).mainMessageId,
+              undefined,
+              msg,
+              { parse_mode: 'Markdown', reply_markup: listingButtons }
+            );
+          }
+        } catch (error: any) {
+          if (error.description?.includes('message is not modified')) {
+            console.log('Message content unchanged, skipping edit');
+          } else {
+            console.error('Error editing message:', error);
+            // Fallback to sending new message
+            if (photos.length > 0) {
+              const mediaGroup = photos.map((fileId: string, i: number) => ({
+                type: 'photo', media: fileId,
+                ...(i === 0 ? { caption: msg, parse_mode: 'Markdown', reply_markup: listingButtons } : {})
+              }));
+              await ctx.replyWithMediaGroup(mediaGroup);
+            } else {
+              await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: listingButtons });
+            }
+          }
+        }
       } else {
-        // No photos, just show the text with buttons
-        await ctx.reply(msg, { 
-          parse_mode: 'Markdown',
-          reply_markup: listingButtons
-        });
+        // No main message to edit, send new one
+        if (photos.length > 0) {
+          const mediaGroup = photos.map((fileId: string, i: number) => ({
+            type: 'photo', media: fileId,
+            ...(i === 0 ? { caption: msg, parse_mode: 'Markdown', reply_markup: listingButtons } : {})
+          }));
+          await ctx.replyWithMediaGroup(mediaGroup);
+        } else {
+          await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: listingButtons });
+        }
       }
-      
-      await ctx.answerCbQuery();
     } catch (error) {
       console.error('Error showing listing:', error);
-      await ctx.answerCbQuery('Error loading listing details');
+      await ctx.reply('❌ Error loading listing. Please try again.');
     }
   });
 }

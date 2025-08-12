@@ -44,60 +44,70 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
     msg += `\n📞 Contact: ${listing.user.contact}`;
     msg += `\n\n📄 Page ${page + 1} of ${Math.ceil((await prisma.listing.count()) / PAGE_SIZE)}`;
     
-    // Add navigation buttons inline with the listing
-    const totalListings = await prisma.listing.count();
-    const totalPages = Math.ceil(totalListings / PAGE_SIZE);
+    const buttons = [];
+    if (page > 0) buttons.push(Markup.button.callback('⬅️ Previous', `browse_${page - 1}`));
+    if (page < Math.ceil((await prisma.listing.count()) / PAGE_SIZE) - 1) buttons.push(Markup.button.callback('Next ➡️', `browse_${page + 1}`));
+    buttons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
     
-    const navigationButtons = [];
-    if (page > 0) {
-      navigationButtons.push(Markup.button.callback('⬅️ Prev', `browse_prev_${page}`));
-    }
-    if (page < totalPages - 1) {
-      navigationButtons.push(Markup.button.callback('➡️ Next', `browse_next_${page}`));
-    }
+    const replyMarkup = Markup.inlineKeyboard(buttons).reply_markup;
     
-    const browseButtons = [];
-    if (navigationButtons.length > 0) {
-      browseButtons.push(navigationButtons);
-    }
-    browseButtons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
-    
-    const browseText = `🔍 *Browse Listings*\n\n${msg}`;
-    const browseMarkup = Markup.inlineKeyboard(browseButtons).reply_markup;
-    
-    if ((ctx.session as any).mainMessageId) {
-      // Update the main message
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        browseText,
-        { parse_mode: 'Markdown', reply_markup: browseMarkup }
-      );
-      
-      // If there are photos, send them as a separate media group
-      if (photos.length > 0) {
-        const mediaGroup = photos.map((fileId: string, i: number) => ({
-          type: 'photo',
-          media: fileId,
-        }));
-        await ctx.replyWithMediaGroup(mediaGroup);
+    // Edit the main message to show the listing
+    if (ctx.session && (ctx.session as any).mainMessageId) {
+      try {
+        if (photos.length > 0) {
+          // For photos, we need to send a new message since we can't edit media groups
+          // But we'll update the main message text to show we're browsing
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            `🎛 *Browsing Listings*\n\nPage ${page + 1}`,
+            { parse_mode: 'Markdown', reply_markup: replyMarkup }
+          );
+          
+          // Send the photos as a separate media group
+          const mediaGroup = photos.map((fileId: string, i: number) => ({
+            type: 'photo', media: fileId,
+            ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+          }));
+          await ctx.replyWithMediaGroup(mediaGroup);
+        } else {
+          // No photos, just edit the main message
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            msg,
+            { parse_mode: 'Markdown', reply_markup: replyMarkup }
+          );
+        }
+      } catch (error: any) {
+        if (error.description?.includes('message is not modified')) {
+          console.log('Message content unchanged, skipping edit');
+        } else {
+          console.error('Error editing message:', error);
+          // Fallback to sending new message
+          if (photos.length > 0) {
+            const mediaGroup = photos.map((fileId: string, i: number) => ({
+              type: 'photo', media: fileId,
+              ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+            }));
+            await ctx.replyWithMediaGroup(mediaGroup);
+          } else {
+            await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: replyMarkup });
+          }
+        }
       }
     } else {
-      // Send new message and store its ID
-      const sent = await ctx.reply(browseText, { 
-        parse_mode: 'Markdown', 
-        reply_markup: browseMarkup 
-      });
-      (ctx.session as any).mainMessageId = sent.message_id;
-      
-      // If there are photos, send them as a separate media group
+      // No main message to edit, send new one
       if (photos.length > 0) {
         const mediaGroup = photos.map((fileId: string, i: number) => ({
-          type: 'photo',
-          media: fileId,
+          type: 'photo', media: fileId,
+          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
         }));
         await ctx.replyWithMediaGroup(mediaGroup);
+      } else {
+        await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: replyMarkup });
       }
     }
   } catch (error) {

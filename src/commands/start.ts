@@ -34,8 +34,13 @@ export async function showMainMenu(ctx: BotContext) {
           { parse_mode: 'Markdown', reply_markup: menuButtons }
         );
         return;
-      } catch (error) {
-        console.log('Failed to edit message, sending new one');
+      } catch (error: any) {
+        if (error.description?.includes('message is not modified')) {
+          console.log('Message content unchanged, skipping edit');
+          return;
+        } else {
+          console.log('Failed to edit message, sending new one');
+        }
       }
     }
 
@@ -74,8 +79,13 @@ export async function showMainMenu(ctx: BotContext) {
           { parse_mode: 'Markdown', reply_markup: fallbackMenuButtons }
         );
         return;
-      } catch (error) {
-        console.log('Failed to edit fallback message, sending new one');
+      } catch (error: any) {
+        if (error.description?.includes('message is not modified')) {
+          console.log('Message content unchanged, skipping edit');
+          return;
+        } else {
+          console.log('Failed to edit fallback message, sending new one');
+        }
       }
     }
 
@@ -98,19 +108,32 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
   bot.start(async (ctx) => {
     if (ctx.chat?.type !== 'private') return;
     
-    // Send welcome message
-    await ctx.reply(
-      `Welcome to GearTrader! 🎸\n\n` +
-      `This bot helps you trade musical gear (no money involved).\n\n` +
-      `🔒 *Privacy Notice:*\n` +
-      `Your contact info and user data are stored *only while your listing is live*.\n` +
-      `As soon as you delete your last listing, all your data is permanently deleted.\n` +
-      `No personal information is retained longer than necessary.`,
-      { parse_mode: 'Markdown' }
-    );
-    
-    // Show the main menu (this will be the main updatable message)
-    await showMainMenu(ctx);
+    try {
+      // Clear any existing mainMessageId from session
+      if (ctx.session) {
+        (ctx.session as any).mainMessageId = undefined;
+        (ctx.session as any).wizardMessageIds = [];
+      }
+      
+      // Send welcome message
+      await ctx.reply(
+        `Welcome to GearTrader! 🎸\n\n` +
+        `This bot helps you trade musical gear (no money involved).\n\n` +
+        `🔒 *Privacy Notice:*\n` +
+        `Your contact info and user data are stored *only while your listing is live*.\n` +
+        `As soon as you delete your last listing, all your data is permanently deleted.\n` +
+        `No personal information is retained longer than necessary.`,
+        { parse_mode: 'Markdown' }
+      );
+      
+      // Show the main menu (this will be the main updatable message)
+      await showMainMenu(ctx);
+    } catch (error) {
+      console.error('Error in start command:', error);
+      // Fallback if cleanup fails
+      await ctx.reply('Welcome to GearTrader! 🎸');
+      await showMainMenu(ctx);
+    }
   });
 
   // Menu command to show main menu anytime
@@ -138,15 +161,33 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
         ]).reply_markup;
         
         if (ctx.session && (ctx.session as any).mainMessageId) {
-          await ctx.telegram.editMessageText(
-            ctx.chat!.id,
-            (ctx.session as any).mainMessageId,
-            undefined,
-            noListingsText,
-            { parse_mode: 'Markdown', reply_markup: noListingsButtons }
-          );
+          try {
+            await ctx.telegram.editMessageText(
+              ctx.chat!.id,
+              (ctx.session as any).mainMessageId,
+              undefined,
+              noListingsText,
+              { parse_mode: 'Markdown', reply_markup: noListingsButtons }
+            );
+          } catch (error: any) {
+            if (error.description?.includes('message is not modified')) {
+              console.log('Message content unchanged, skipping edit');
+            } else {
+              console.error('Error editing no listings message:', error);
+              // Fallback to sending new message
+              const sent = await ctx.reply(noListingsText, { 
+                parse_mode: 'Markdown', 
+                reply_markup: noListingsButtons 
+              });
+              (ctx.session as any).mainMessageId = sent.message_id;
+            }
+          }
         } else {
-          await ctx.reply(noListingsText, { reply_markup: noListingsButtons });
+          const sent = await ctx.reply(noListingsText, { 
+            parse_mode: 'Markdown', 
+            reply_markup: noListingsButtons 
+          });
+          (ctx.session as any).mainMessageId = sent.message_id;
         }
         return;
       }
@@ -182,15 +223,33 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
       ]).reply_markup;
       
       if (ctx.session && (ctx.session as any).mainMessageId) {
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          errorText,
-          { parse_mode: 'Markdown', reply_markup: errorButtons }
-        );
+        try {
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            errorText,
+            { parse_mode: 'Markdown', reply_markup: errorButtons }
+          );
+        } catch (error: any) {
+          if (error.description?.includes('message is not modified')) {
+            console.log('Message content unchanged, skipping edit');
+          } else {
+            console.error('Error editing error message:', error);
+            // Fallback to sending new message
+            const sent = await ctx.reply(errorText, { 
+              parse_mode: 'Markdown', 
+              reply_markup: errorButtons 
+            });
+            (ctx.session as any).mainMessageId = sent.message_id;
+          }
+        }
       } else {
-        await ctx.reply(errorText, { reply_markup: errorButtons });
+        const sent = await ctx.reply(errorText, { 
+          parse_mode: 'Markdown', 
+          reply_markup: errorButtons 
+        });
+        (ctx.session as any).mainMessageId = sent.message_id;
       }
     }
   });
@@ -262,15 +321,33 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
       ]).reply_markup;
       
       if (ctx.session && (ctx.session as any).mainMessageId) {
-        await ctx.telegram.editMessageText(
-          ctx.chat!.id,
-          (ctx.session as any).mainMessageId,
-          undefined,
-          errorText,
-          { parse_mode: 'Markdown', reply_markup: errorButtons }
-        );
+        try {
+          await ctx.telegram.editMessageText(
+            ctx.chat!.id,
+            (ctx.session as any).mainMessageId,
+            undefined,
+            errorText,
+            { parse_mode: 'Markdown', reply_markup: errorButtons }
+          );
+        } catch (error: any) {
+          if (error.description?.includes('message is not modified')) {
+            console.log('Message content unchanged, skipping edit');
+          } else {
+            console.error('Error editing error message:', error);
+            // Fallback to sending new message
+            const sent = await ctx.reply(errorText, { 
+              parse_mode: 'Markdown', 
+              reply_markup: errorButtons 
+            });
+            (ctx.session as any).mainMessageId = sent.message_id;
+          }
+        }
       } else {
-        await ctx.reply(errorText, { reply_markup: errorButtons });
+        const sent = await ctx.reply(errorText, { 
+          parse_mode: 'Markdown', 
+          reply_markup: errorButtons 
+        });
+        (ctx.session as any).mainMessageId = sent.message_id;
       }
     }
   });
@@ -300,15 +377,33 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
     ]).reply_markup;
     
     if (ctx.session && (ctx.session as any).mainMessageId) {
-      await ctx.telegram.editMessageText(
-        ctx.chat!.id,
-        (ctx.session as any).mainMessageId,
-        undefined,
-        helpText,
-        { parse_mode: 'Markdown', reply_markup: helpButtons }
-      );
+      try {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          helpText,
+          { parse_mode: 'Markdown', reply_markup: helpButtons }
+        );
+      } catch (error: any) {
+        if (error.description?.includes('message is not modified')) {
+          console.log('Message content unchanged, skipping edit');
+        } else {
+          console.error('Error editing help message:', error);
+          // Fallback to sending new message
+          const sent = await ctx.reply(helpText, { 
+            parse_mode: 'Markdown', 
+            reply_markup: helpButtons 
+          });
+          (ctx.session as any).mainMessageId = sent.message_id;
+        }
+      }
     } else {
-      await ctx.reply(helpText, { reply_markup: helpButtons });
+      const sent = await ctx.reply(helpText, { 
+        parse_mode: 'Markdown', 
+        reply_markup: helpButtons 
+      });
+      (ctx.session as any).mainMessageId = sent.message_id;
     }
   });
 
