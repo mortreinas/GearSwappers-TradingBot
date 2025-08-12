@@ -9,9 +9,11 @@ export interface SessionData {
     location?: string;
     contact?: string;
     photos?: string[];
+    marketplaceLink?: string;
   };
   mainMessageId?: number;
   wizardMessageIds?: number[];
+  navigationMessageId?: number; // Added: tracks the navigation message ID
 }
 
 export interface BotContext extends Scenes.WizardContext<SessionData> {

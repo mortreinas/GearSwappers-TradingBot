@@ -53,8 +53,10 @@ async function handleBrowseListings(ctx, prisma, page = 0) {
     try {
         if (ctx.chat?.type !== 'private')
             return;
-        // Clean slate: Delete old bot messages and start fresh
-        await cleanBotMessages(ctx);
+        // Only clean messages when starting fresh (page 0), not when navigating
+        if (page === 0) {
+            await cleanBotMessages(ctx);
+        }
         const listings = await prisma.listing.findMany({
             orderBy: { createdAt: 'desc' },
             include: { user: true },
