@@ -1,13 +1,27 @@
 version: '3.8'
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: geartrader
+      POSTGRES_USER: geartrader
+      POSTGRES_PASSWORD: geartrader123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
   bot:
     build: .
     env_file:
       - .env
-    volumes:
-      - prisma-db:/app/prisma
+    environment:
+      - DATABASE_URL=postgresql://geartrader:geartrader123@postgres:5432/geartrader
+    depends_on:
+      - postgres
     restart: unless-stopped
-    command: pnpm run start
+
 volumes:
-  prisma-db:
+  postgres-data:
     driver: local 

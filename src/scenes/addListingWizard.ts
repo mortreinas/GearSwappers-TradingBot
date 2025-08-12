@@ -77,7 +77,10 @@ export function addListingWizard(prisma: PrismaClient) {
         // Validate and save
         try {
           const data = addListingSchema.parse((ctx.session as any).addListing);
-          const user = await prisma.user.upsert({
+          console.log('Saving listing data:', data);
+          
+          // Use ctx.prisma instead of parameter
+          const user = await (ctx as any).prisma.user.upsert({
             where: { telegramId: String(ctx.from?.id) },
             update: {
               username: ctx.from?.username,
@@ -89,7 +92,9 @@ export function addListingWizard(prisma: PrismaClient) {
               contact: data.contact,
             },
           });
-          await prisma.listing.create({
+          console.log('User created/updated:', user);
+          
+          const listing = await (ctx as any).prisma.listing.create({
             data: {
               userId: user.id,
               title: data.title,
@@ -99,8 +104,11 @@ export function addListingWizard(prisma: PrismaClient) {
               photos: JSON.stringify(data.photos),
             },
           });
-          await ctx.reply('Your listing has been added!');
+          console.log('Listing created:', listing);
+          
+          await ctx.reply('Your listing has been added successfully! 🎉');
         } catch (e) {
+          console.error('Error saving listing:', e);
           await ctx.reply('There was an error saving your listing. Please try again.');
         }
         return ctx.scene.leave();

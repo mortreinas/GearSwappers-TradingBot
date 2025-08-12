@@ -9,14 +9,13 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
   bot.start(async (ctx) => {
     if (ctx.chat?.type !== 'private') return;
     await ctx.reply(
-      `Welcome to GearTrader!\n\n` +
+      `Welcome to GearTrader! 🎸\n\n` +
       `This bot helps you trade musical gear (no money involved).\n\n` +
       `You can use the buttons below or the following commands:\n` +
       `• /browse — Browse all listings\n` +
       `• /add — Add a new listing (multi-step wizard)\n` +
       `• /mylistings — View, edit, or delete your listings\n` +
       `• /listings — See all listings as a quick list\n\n` +
-      `Buttons do the same as the commands for quick access.\n\n` +
       `🔒 *Privacy Notice:*\n` +
       `Your contact info and user data are stored *only while your listing is live*.\n` +
       `As soon as you delete your last listing, all your data is permanently deleted.\n` +
@@ -27,7 +26,6 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
           [Markup.button.callback('🎛 Browse Listings', 'browse_listings')],
           [Markup.button.callback('➕ Add Listing', 'add_listing')],
           [Markup.button.callback('📦 My Listings', 'my_listings')],
-          [Markup.button.callback('📃 All Listings', 'all_listings')],
         ]).reply_markup
       }
     );
@@ -47,12 +45,5 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
     console.log('My Listings button pressed');
     await ctx.answerCbQuery();
     await handleMyListings(ctx, prisma);
-  });
-  bot.action('all_listings', async (ctx) => {
-    console.log('All Listings button pressed');
-    await ctx.answerCbQuery();
-    if (ctx.chat?.id) {
-      await ctx.telegram.sendMessage(ctx.chat.id, '/listings');
-    }
   });
 } 
