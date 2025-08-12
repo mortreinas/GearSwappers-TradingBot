@@ -7,42 +7,71 @@ export async function handleMyListings(ctx: BotContext, prisma: PrismaClient) {
     if (ctx.chat?.type !== 'private') return;
     const user = await prisma.user.findUnique({ where: { telegramId: String(ctx.from?.id) }, include: { listings: true } });
     if (!user || !user.listings.length) {
-      await ctx.reply('You have no listings.', {
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('➕ Add Your First Listing', 'add_listing')],
-          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-        ]).reply_markup
-      });
+      const noListingsText = `📦 *My Listings*\n\nYou have no listings.`;
+      const noListingsButtons = Markup.inlineKeyboard([
+        [Markup.button.callback('➕ Add Your First Listing', 'add_listing')],
+        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+      ]).reply_markup;
+      
+      if ((ctx.session as any).mainMessageId) {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          noListingsText,
+          { parse_mode: 'Markdown', reply_markup: noListingsButtons }
+        );
+      } else {
+        await ctx.reply(noListingsText, { reply_markup: noListingsButtons });
+      }
       if (ctx.callbackQuery) await ctx.answerCbQuery();
       return;
     }
-    for (const listing of user.listings) {
-      let msg = `*${listing.title}*`;
-      if (listing.price) msg += `\n💵 Price: ${listing.price}`;
-      await ctx.reply(msg, {
-        parse_mode: 'Markdown',
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('✏️ Edit', `edit_listing_${listing.id}`), Markup.button.callback('🗑 Delete', `delete_listing_${listing.id}`)]
-        ]).reply_markup
-      });
-    }
     
-    // Add back to menu button
-    await ctx.reply('Manage your listings:', {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('➕ Add New Listing', 'add_listing')],
-        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-      ]).reply_markup
-    });
+    // Create buttons for user's listings
+    const listingButtons = user.listings.map(listing => [
+      Markup.button.callback(`✏️ ${listing.title}`, `edit_listing_${listing.id}`),
+      Markup.button.callback(`🗑️ ${listing.title}`, `delete_listing_${listing.id}`)
+    ]);
+    
+    // Add management buttons
+    listingButtons.push([Markup.button.callback('➕ Add New Listing', 'add_listing')]);
+    listingButtons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
+    
+    const myListingsText = `📦 *My Listings*\n\nManage your ${user.listings.length} listing(s):`;
+    const myListingsButtons = Markup.inlineKeyboard(listingButtons).reply_markup;
+    
+    if ((ctx.session as any).mainMessageId) {
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        (ctx.session as any).mainMessageId,
+        undefined,
+        myListingsText,
+        { parse_mode: 'Markdown', reply_markup: myListingsButtons }
+      );
+    } else {
+      await ctx.reply(myListingsText, { reply_markup: myListingsButtons });
+    }
     
     if (ctx.callbackQuery) await ctx.answerCbQuery();
   } catch (error) {
     console.error('Error in handleMyListings:', error);
-    await ctx.reply('Sorry, there was an error loading your listings. Please try again.', {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-      ]).reply_markup
-    });
+    const errorText = `❌ *Error*\n\nSorry, there was an error loading your listings. Please try again.`;
+    const errorButtons = Markup.inlineKeyboard([
+      [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+    ]).reply_markup;
+    
+    if ((ctx.session as any).mainMessageId) {
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        (ctx.session as any).mainMessageId,
+        undefined,
+        errorText,
+        { parse_mode: 'Markdown', reply_markup: errorButtons }
+      );
+    } else {
+      await ctx.reply(errorText, { reply_markup: errorButtons });
+    }
   }
 }
 

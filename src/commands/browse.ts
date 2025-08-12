@@ -15,11 +15,22 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
       include: { user: true },
     });
     if (!listings.length) {
-      await ctx.reply('No listings found.', {
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-        ]).reply_markup
-      });
+      const noListingsText = `📭 *No Listings Found*\n\nNo listings available to browse.`;
+      const noListingsButtons = Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+      ]).reply_markup;
+      
+      if ((ctx.session as any).mainMessageId) {
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          (ctx.session as any).mainMessageId,
+          undefined,
+          noListingsText,
+          { parse_mode: 'Markdown', reply_markup: noListingsButtons }
+        );
+      } else {
+        await ctx.reply(noListingsText, { reply_markup: noListingsButtons });
+      }
       return;
     }
     
@@ -31,20 +42,6 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
     msg += `\n📍 Location: ${listing.location}`;
     msg += `\n📞 Contact: ${listing.user.contact}`;
     msg += `\n\n📄 Page ${page + 1} of ${Math.ceil((await prisma.listing.count()) / PAGE_SIZE)}`;
-    
-    if (photos.length > 0) {
-      // Show all photos in a grouped media message
-      const mediaGroup = photos.map((fileId: string, i: number) => ({
-        type: 'photo',
-        media: fileId,
-        ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
-      }));
-      
-      await ctx.replyWithMediaGroup(mediaGroup);
-    } else {
-      // No photos, just show the text
-      await ctx.reply(msg, { parse_mode: 'Markdown' });
-    }
     
     // Add navigation buttons inline with the listing
     const totalListings = await prisma.listing.count();
@@ -58,23 +55,68 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
       navigationButtons.push(Markup.button.callback('➡️ Next', `browse_next_${page}`));
     }
     
+    const browseButtons = [];
     if (navigationButtons.length > 0) {
-      await ctx.reply('Navigate:', Markup.inlineKeyboard([
-        navigationButtons,
-        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
-      ]));
+      browseButtons.push(navigationButtons);
+    }
+    browseButtons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
+    
+    const browseText = `🔍 *Browse Listings*\n\n${msg}`;
+    const browseMarkup = Markup.inlineKeyboard(browseButtons).reply_markup;
+    
+    if ((ctx.session as any).mainMessageId) {
+      // Update the main message
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        (ctx.session as any).mainMessageId,
+        undefined,
+        browseText,
+        { parse_mode: 'Markdown', reply_markup: browseMarkup }
+      );
+      
+      // If there are photos, send them as a separate media group
+      if (photos.length > 0) {
+        const mediaGroup = photos.map((fileId: string, i: number) => ({
+          type: 'photo',
+          media: fileId,
+        }));
+        await ctx.replyWithMediaGroup(mediaGroup);
+      }
     } else {
-      await ctx.reply('Navigation:', Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
-      ]));
+      // Send new message and store its ID
+      const sent = await ctx.reply(browseText, { 
+        parse_mode: 'Markdown', 
+        reply_markup: browseMarkup 
+      });
+      (ctx.session as any).mainMessageId = sent.message_id;
+      
+      // If there are photos, send them as a separate media group
+      if (photos.length > 0) {
+        const mediaGroup = photos.map((fileId: string, i: number) => ({
+          type: 'photo',
+          media: fileId,
+        }));
+        await ctx.replyWithMediaGroup(mediaGroup);
+      }
     }
   } catch (error) {
     console.error('Error in handleBrowseListings:', error);
-    await ctx.reply('Sorry, there was an error loading the listings. Please try again.', {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-      ]).reply_markup
-    });
+    const errorText = `❌ *Error*\n\nSorry, there was an error loading the listings. Please try again.`;
+    const errorButtons = Markup.inlineKeyboard([
+      [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+    ]).reply_markup;
+    
+    if ((ctx.session as any).mainMessageId) {
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        (ctx.session as any).mainMessageId,
+        undefined,
+        errorText,
+        { parse_mode: 'Markdown', reply_markup: errorButtons }
+      );
+    } else {
+      await ctx.reply(errorText, { reply_markup: errorButtons });
+    }
   }
 }
 

@@ -17,11 +17,14 @@ export function addListingWizard(prisma: PrismaClient) {
     'add-listing-wizard',
     async (ctx: any) => {
       (ctx.session as any).addListing = {};
-      await ctx.reply('Enter the title of your listing (minimum 3 characters):', {
+      (ctx.session as any).wizardMessageIds = []; // Store wizard message IDs for cleanup
+      
+      const sent = await ctx.reply('Enter the title of your listing (minimum 3 characters):', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });
+      (ctx.session as any).wizardMessageIds.push(sent.message_id);
       return ctx.wizard.next();
     },
     async (ctx: any) => {
@@ -29,150 +32,168 @@ export function addListingWizard(prisma: PrismaClient) {
         try {
           // Validate title length immediately
           if (ctx.message.text.length < 3) {
-            await ctx.reply('❌ Title is too short! It must be at least 3 characters long. Please try again:', {
+            const sent = await ctx.reply('❌ Title is too short! It must be at least 3 characters long. Please try again:', {
               reply_markup: Markup.inlineKeyboard([
                 [Markup.button.callback('❌ Cancel', 'cancel_listing')]
               ]).reply_markup
             });
+            (ctx.session as any).wizardMessageIds.push(sent.message_id);
             return;
           }
           (ctx.session as any).addListing = { ...(ctx.session as any).addListing, title: ctx.message.text };
-          await ctx.reply('Enter a description (minimum 10 characters):', {
+          const sent = await ctx.reply('Enter a description (minimum 10 characters):', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
           return ctx.wizard.next();
         } catch (error) {
-          await ctx.reply('❌ Invalid title. Please try again:', {
+          const sent = await ctx.reply('❌ Invalid title. Please try again:', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
         }
       }
-      await ctx.reply('Please send text for the title (minimum 3 characters).', {
+      const sent = await ctx.reply('Please send text for the title (minimum 3 characters).', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });
+      (ctx.session as any).wizardMessageIds.push(sent.message_id);
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
         try {
           // Validate description length immediately
           if (ctx.message.text.length < 10) {
-            await ctx.reply('❌ Description is too short! It must be at least 10 characters long. Please try again:', {
+            const sent = await ctx.reply('❌ Description is too short! It must be at least 10 characters long. Please try again:', {
               reply_markup: Markup.inlineKeyboard([
                 [Markup.button.callback('❌ Cancel', 'cancel_listing')]
               ]).reply_markup
             });
+            (ctx.session as any).wizardMessageIds.push(sent.message_id);
             return;
           }
           (ctx.session as any).addListing = { ...(ctx.session as any).addListing, description: ctx.message.text };
-          await ctx.reply('Enter a price or use the skip button below:', {
+          const sent = await ctx.reply('Enter a price or use the skip button below:', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('⏭️ Skip Price', 'skip_price')],
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
           return ctx.wizard.next();
         } catch (error) {
-          await ctx.reply('❌ Invalid description. Please try again:', {
+          const sent = await ctx.reply('❌ Invalid description. Please try again:', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
         }
       }
-      await ctx.reply('Please send text for the description (minimum 10 characters).', {
+      const sent = await ctx.reply('Please send text for the description (minimum 10 characters).', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });
+      (ctx.session as any).wizardMessageIds.push(sent.message_id);
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
         const price = ctx.message.text.trim();
         (ctx.session as any).addListing = { ...(ctx.session as any).addListing, price };
-        await ctx.reply('Enter your location (minimum 2 characters):', {
+        const sent = await ctx.reply('Enter your location (minimum 2 characters):', {
           reply_markup: Markup.inlineKeyboard([
             [Markup.button.callback('❌ Cancel', 'cancel_listing')]
           ]).reply_markup
         });
+        (ctx.session as any).wizardMessageIds.push(sent.message_id);
         return ctx.wizard.next();
       }
-      await ctx.reply('Please send text for the price or use the skip button.', {
+      const sent = await ctx.reply('Please send text for the price or use the skip button.', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });
+      (ctx.session as any).wizardMessageIds.push(sent.message_id);
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
         try {
           // Validate location length immediately
           if (ctx.message.text.length < 2) {
-            await ctx.reply('❌ Location is too short! It must be at least 2 characters long. Please try again:', {
+            const sent = await ctx.reply('❌ Location is too short! It must be at least 2 characters long. Please try again:', {
               reply_markup: Markup.inlineKeyboard([
                 [Markup.button.callback('❌ Cancel', 'cancel_listing')]
               ]).reply_markup
             });
+            (ctx.session as any).wizardMessageIds.push(sent.message_id);
             return;
           }
           (ctx.session as any).addListing = { ...(ctx.session as any).addListing, location: ctx.message.text };
-          await ctx.reply('Enter your contact info (minimum 2 characters):', {
+          const sent = await ctx.reply('Enter your contact info (minimum 2 characters):', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
           return ctx.wizard.next();
         } catch (error) {
-          await ctx.reply('❌ Invalid location. Please try again:', {
+          const sent = await ctx.reply('❌ Invalid location. Please try again:', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
         }
       }
-      await ctx.reply('Please send text for the location (minimum 2 characters).', {
+      const sent = await ctx.reply('Please send text for the location (minimum 2 characters).', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });
+      (ctx.session as any).wizardMessageIds.push(sent.message_id);
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
         try {
           // Validate contact length immediately
           if (ctx.message.text.length < 2) {
-            await ctx.reply('❌ Contact info is too short! It must be at least 2 characters long. Please try again:', {
+            const sent = await ctx.reply('❌ Contact info is too short! It must be at least 2 characters long. Please try again:', {
               reply_markup: Markup.inlineKeyboard([
                 [Markup.button.callback('❌ Cancel', 'cancel_listing')]
               ]).reply_markup
             });
+            (ctx.session as any).wizardMessageIds.push(sent.message_id);
             return;
           }
           (ctx.session as any).addListing = { ...(ctx.session as any).addListing, contact: ctx.message.text, photos: [] };
-          await ctx.reply('Send up to 5 photos (send /done when finished):', {
+          const sent = await ctx.reply('Send up to 5 photos (send /done when finished):', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
           return ctx.wizard.next();
         } catch (error) {
-          await ctx.reply('❌ Invalid contact info. Please try again:', {
+          const sent = await ctx.reply('❌ Invalid contact info. Please try again:', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
         }
       }
-      await ctx.reply('Please send text for the contact info (minimum 2 characters).', {
+      const sent = await ctx.reply('Please send text for the contact info (minimum 2 characters).', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });
+      (ctx.session as any).wizardMessageIds.push(sent.message_id);
     },
     async (ctx: any) => {
       if (ctx.message && 'photo' in ctx.message) {
@@ -180,17 +201,19 @@ export function addListingWizard(prisma: PrismaClient) {
         (ctx.session as any).addListing.photos = (ctx.session as any).addListing.photos || [];
         if ((ctx.session as any).addListing.photos.length < 5) {
           (ctx.session as any).addListing.photos.push(fileId);
-          await ctx.reply(`📸 Photo ${(ctx.session as any).addListing.photos.length}/5 received. Send more or /done.`, {
+          const sent = await ctx.reply(`📸 Photo ${(ctx.session as any).addListing.photos.length}/5 received. Send more or /done.`, {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
         } else {
-          await ctx.reply('📸 You have reached the maximum of 5 photos. Send /done to finish.', {
+          const sent = await ctx.reply('📸 You have reached the maximum of 5 photos. Send /done to finish.', {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('❌ Cancel', 'cancel_listing')]
             ]).reply_markup
           });
+          (ctx.session as any).wizardMessageIds.push(sent.message_id);
         }
         return;
       }
@@ -227,27 +250,57 @@ export function addListingWizard(prisma: PrismaClient) {
           });
           console.log('Listing created:', listing);
           
-          await ctx.reply('🎉 Your listing has been added successfully!', {
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-            ]).reply_markup
-          });
+          // Success message
+          const successSent = await ctx.reply('🎉 Your listing has been added successfully!');
+          
+          // Clean up all wizard messages
+          await cleanupWizardMessages(ctx);
+          
+          // Return to main menu
+          const { showMainMenu } = require('../commands/start');
+          await showMainMenu(ctx);
+          
         } catch (e) {
           console.error('Error saving listing:', e);
           if (e instanceof z.ZodError) {
             const errorMessages = (e as any).errors.map((err: any) => `• ${err.message}`).join('\n');
-            await ctx.reply(`❌ Validation errors:\n${errorMessages}\n\nPlease fix these issues and try again.`);
+            const errorSent = await ctx.reply(`❌ Validation errors:\n${errorMessages}\n\nPlease fix these issues and try again.`);
+            (ctx.session as any).wizardMessageIds.push(errorSent.message_id);
           } else {
-            await ctx.reply('❌ There was an error saving your listing. Please try again.');
+            const errorSent = await ctx.reply('❌ There was an error saving your listing. Please try again.');
+            (ctx.session as any).wizardMessageIds.push(errorSent.message_id);
           }
         }
         return ctx.scene.leave();
       }
-      await ctx.reply('Send a photo or /done to finish.', {
+      const sent = await ctx.reply('Send a photo or /done to finish.', {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Cancel', 'cancel_listing')]
         ]).reply_markup
       });
+      (ctx.session as any).wizardMessageIds.push(sent.message_id);
     }
   );
+}
+
+// Helper function to clean up wizard messages
+async function cleanupWizardMessages(ctx: any) {
+  try {
+    const wizardMessageIds = (ctx.session as any).wizardMessageIds || [];
+    console.log(`Cleaning up ${wizardMessageIds.length} wizard messages`);
+    
+    // Delete all wizard messages
+    for (const messageId of wizardMessageIds) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat!.id, messageId);
+      } catch (error) {
+        console.log(`Failed to delete message ${messageId}:`, error);
+      }
+    }
+    
+    // Clear the wizard message IDs
+    (ctx.session as any).wizardMessageIds = [];
+  } catch (error) {
+    console.error('Error cleaning up wizard messages:', error);
+  }
 } 
