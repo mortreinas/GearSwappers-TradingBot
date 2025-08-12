@@ -21,12 +21,9 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
         });
         return;
       }
-      // Show all as buttons: "Product Name (Price) - Location"
+      // Show all as buttons: just the title
       const buttons = listings.map(listing => {
-        let label = `${listing.title}`;
-        if (listing.price) label += ` (${listing.price})`;
-        label += ` - ${listing.location}`;
-        return [Markup.button.callback(label, `show_listing_${listing.id}`)];
+        return [Markup.button.callback(listing.title, `show_listing_${listing.id}`)];
       });
       
       // Add back to menu button
@@ -88,4 +85,4 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       await ctx.answerCbQuery('Error loading listing details');
     }
   });
-} 
+}

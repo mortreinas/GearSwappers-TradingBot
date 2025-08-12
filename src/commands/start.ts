@@ -86,7 +86,42 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
   // Handle menu button actions
   bot.action('browse_listings', async (ctx) => {
     await ctx.answerCbQuery();
-    await handleBrowseListings(ctx, prisma, 0);
+    // Show all listings as buttons (same as /listings command)
+    try {
+      const listings = await prisma.listing.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { user: true },
+      });
+      
+      if (!listings.length) {
+        await ctx.reply('No listings found. Be the first to add one! 🎸', {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('➕ Add New Listing', 'add_listing')],
+            [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+          ]).reply_markup
+        });
+        return;
+      }
+      
+      // Show all as buttons: just the title
+      const buttons = listings.map(listing => {
+        return [Markup.button.callback(listing.title, `show_listing_${listing.id}`)];
+      });
+      
+      // Add back to menu button
+      buttons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
+      
+      await ctx.reply(`Found ${listings.length} listings. Select one to view details:`, {
+        reply_markup: Markup.inlineKeyboard(buttons).reply_markup
+      });
+    } catch (error) {
+      console.error('Error loading listings:', error);
+      await ctx.reply('Sorry, there was an error loading the listings. Please try again.', {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+        ]).reply_markup
+      });
+    }
   });
 
   bot.action('add_listing', async (ctx) => {

@@ -22,31 +22,52 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
       });
       return;
     }
-    for (const listing of listings) {
-      const photos = JSON.parse(listing.photos || '[]');
-      let msg = `*${listing.title}*\n${listing.description}\n`;
-      if (listing.price) msg += `\n💵 Price: ${listing.price}`;
-      msg += `\n📍 Location: ${listing.location}`;
-      msg += `\n📞 Contact: ${listing.user.contact}`;
+    
+    // Show only the first listing from this page
+    const listing = listings[0];
+    const photos = JSON.parse(listing.photos || '[]');
+    let msg = `*${listing.title}*\n${listing.description}\n`;
+    if (listing.price) msg += `\n💵 Price: ${listing.price}`;
+    msg += `\n📍 Location: ${listing.location}`;
+    msg += `\n📞 Contact: ${listing.user.contact}`;
+    msg += `\n\n📄 Page ${page + 1} of ${Math.ceil((await prisma.listing.count()) / PAGE_SIZE)}`;
+    
+    if (photos.length > 0) {
+      // Show all photos in a grouped media message
+      const mediaGroup = photos.map((fileId: string, i: number) => ({
+        type: 'photo',
+        media: fileId,
+        ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+      }));
       
-      if (photos.length > 0) {
-        // Show all photos in a grouped media message
-        const mediaGroup = photos.map((fileId: string, i: number) => ({
-          type: 'photo',
-          media: fileId,
-          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
-        }));
-        
-        await ctx.replyWithMediaGroup(mediaGroup);
-      } else {
-        // No photos, just show the text
-        await ctx.reply(msg, { parse_mode: 'Markdown' });
-      }
+      await ctx.replyWithMediaGroup(mediaGroup);
+    } else {
+      // No photos, just show the text
+      await ctx.reply(msg, { parse_mode: 'Markdown' });
     }
-    await ctx.reply('Navigate:', Markup.inlineKeyboard([
-      [Markup.button.callback('⬅️ Prev', `browse_prev_${page}`), Markup.button.callback('➡️ Next', `browse_next_${page}`)],
-      [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
-    ]));
+    
+    // Add navigation buttons inline with the listing
+    const totalListings = await prisma.listing.count();
+    const totalPages = Math.ceil(totalListings / PAGE_SIZE);
+    
+    const navigationButtons = [];
+    if (page > 0) {
+      navigationButtons.push(Markup.button.callback('⬅️ Prev', `browse_prev_${page}`));
+    }
+    if (page < totalPages - 1) {
+      navigationButtons.push(Markup.button.callback('➡️ Next', `browse_next_${page}`));
+    }
+    
+    if (navigationButtons.length > 0) {
+      await ctx.reply('Navigate:', Markup.inlineKeyboard([
+        navigationButtons,
+        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
+      ]));
+    } else {
+      await ctx.reply('Navigation:', Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
+      ]));
+    }
   } catch (error) {
     console.error('Error in handleBrowseListings:', error);
     await ctx.reply('Sorry, there was an error loading the listings. Please try again.', {
