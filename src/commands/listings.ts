@@ -14,7 +14,11 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       console.log(`Found ${listings.length} listings`);
       
       if (!listings.length) {
-        await ctx.reply('No listings found. Be the first to add one with /add! 🎸');
+        await ctx.reply('No listings found. Be the first to add one with /add! 🎸', {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+          ]).reply_markup
+        });
         return;
       }
       // Show all as buttons: "Product Name (Price) - Location"
@@ -24,12 +28,20 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
         label += ` - ${listing.location}`;
         return [Markup.button.callback(label, `show_listing_${listing.id}`)];
       });
+      
+      // Add back to menu button
+      buttons.push([Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]);
+      
       await ctx.reply(`Found ${listings.length} listings. Select one to view details:`, {
         reply_markup: Markup.inlineKeyboard(buttons).reply_markup
       });
     } catch (error) {
       console.error('Error in listings command:', error);
-      await ctx.reply('Sorry, there was an error loading the listings. Please try again.');
+      await ctx.reply('Sorry, there was an error loading the listings. Please try again.', {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+        ]).reply_markup
+      });
     }
   });
 
@@ -49,18 +61,28 @@ export function registerGroupListingsCommand(bot: Telegraf<BotContext>, prisma: 
       if (listing.price) msg += `\n💵 Price: ${listing.price}`;
       msg += `\n📍 Location: ${listing.location}`;
       msg += `\n📞 Contact: ${listing.user.contact}`;
-      if (photos.length) {
-        await ctx.replyWithMediaGroup(
-          photos.map((fileId: string, i: number) => ({
-            type: 'photo',
-            media: fileId,
-            ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
-          }))
-        );
+      
+      if (photos.length > 0) {
+        // Show all photos in a grouped media message
+        const mediaGroup = photos.map((fileId: string, i: number) => ({
+          type: 'photo',
+          media: fileId,
+          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+        }));
+        
+        await ctx.replyWithMediaGroup(mediaGroup);
       } else {
+        // No photos, just show the text
         await ctx.reply(msg, { parse_mode: 'Markdown' });
       }
       await ctx.answerCbQuery();
+      
+      // Add back to menu button after showing listing
+      await ctx.reply('What would you like to do next?', {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+        ]).reply_markup
+      });
     } catch (error) {
       console.error('Error showing listing:', error);
       await ctx.answerCbQuery('Error loading listing details');

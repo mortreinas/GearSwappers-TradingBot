@@ -4,12 +4,12 @@ import { z } from 'zod';
 import { BotContext } from '../types/context';
 
 const addListingSchema = z.object({
-  title: z.string().min(3).max(100),
-  description: z.string().min(10).max(1000),
-  price: z.string().max(50).optional(),
-  location: z.string().min(2).max(100),
-  contact: z.string().min(2).max(100),
-  photos: z.array(z.string()).max(5),
+  title: z.string().min(3, "Title must be at least 3 characters long").max(100, "Title must be 100 characters or less"),
+  description: z.string().min(10, "Description must be at least 10 characters long").max(1000, "Description must be 1000 characters or less"),
+  price: z.string().max(50, "Price must be 50 characters or less").optional(),
+  location: z.string().min(2, "Location must be at least 2 characters long").max(100, "Location must be 100 characters or less"),
+  contact: z.string().min(2, "Contact must be at least 2 characters long").max(100, "Contact must be 100 characters or less"),
+  photos: z.array(z.string()).max(5, "Maximum 5 photos allowed"),
 });
 
 export function addListingWizard(prisma: PrismaClient) {
@@ -17,49 +17,89 @@ export function addListingWizard(prisma: PrismaClient) {
     'add-listing-wizard',
     async (ctx: any) => {
       (ctx.session as any).addListing = {};
-      await ctx.reply('Enter the title of your listing:');
+      await ctx.reply('Enter the title of your listing (minimum 3 characters):');
       return ctx.wizard.next();
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
-        (ctx.session as any).addListing = { ...(ctx.session as any).addListing, title: ctx.message.text };
-        await ctx.reply('Enter a description:');
-        return ctx.wizard.next();
+        try {
+          // Validate title length immediately
+          if (ctx.message.text.length < 3) {
+            await ctx.reply('❌ Title is too short! It must be at least 3 characters long. Please try again:');
+            return;
+          }
+          (ctx.session as any).addListing = { ...(ctx.session as any).addListing, title: ctx.message.text };
+          await ctx.reply('Enter a description (minimum 10 characters):');
+          return ctx.wizard.next();
+        } catch (error) {
+          await ctx.reply('❌ Invalid title. Please try again:');
+        }
       }
-      await ctx.reply('Please send text for the title.');
+      await ctx.reply('Please send text for the title (minimum 3 characters).');
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
-        (ctx.session as any).addListing = { ...(ctx.session as any).addListing, description: ctx.message.text };
-        await ctx.reply('Enter a price (or type skip):');
-        return ctx.wizard.next();
+        try {
+          // Validate description length immediately
+          if (ctx.message.text.length < 10) {
+            await ctx.reply('❌ Description is too short! It must be at least 10 characters long. Please try again:');
+            return;
+          }
+          (ctx.session as any).addListing = { ...(ctx.session as any).addListing, description: ctx.message.text };
+          await ctx.reply('Enter a price or use the skip button below:', {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('⏭️ Skip Price', 'skip_price')]
+            ]).reply_markup
+          });
+          return ctx.wizard.next();
+        } catch (error) {
+          await ctx.reply('❌ Invalid description. Please try again:');
+        }
       }
-      await ctx.reply('Please send text for the description.');
+      await ctx.reply('Please send text for the description (minimum 10 characters).');
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
-        const price = ctx.message.text.trim().toLowerCase() === 'skip' ? undefined : ctx.message.text;
+        const price = ctx.message.text.trim();
         (ctx.session as any).addListing = { ...(ctx.session as any).addListing, price };
-        await ctx.reply('Enter your location:');
+        await ctx.reply('Enter your location (minimum 2 characters):');
         return ctx.wizard.next();
       }
-      await ctx.reply('Please send text for the price or type skip.');
+      await ctx.reply('Please send text for the price or use the skip button.');
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
-        (ctx.session as any).addListing = { ...(ctx.session as any).addListing, location: ctx.message.text };
-        await ctx.reply('Enter your contact info:');
-        return ctx.wizard.next();
+        try {
+          // Validate location length immediately
+          if (ctx.message.text.length < 2) {
+            await ctx.reply('❌ Location is too short! It must be at least 2 characters long. Please try again:');
+            return;
+          }
+          (ctx.session as any).addListing = { ...(ctx.session as any).addListing, location: ctx.message.text };
+          await ctx.reply('Enter your contact info (minimum 2 characters):');
+          return ctx.wizard.next();
+        } catch (error) {
+          await ctx.reply('❌ Invalid location. Please try again:');
+        }
       }
-      await ctx.reply('Please send text for the location.');
+      await ctx.reply('Please send text for the location (minimum 2 characters).');
     },
     async (ctx: any) => {
       if (ctx.message && 'text' in ctx.message) {
-        (ctx.session as any).addListing = { ...(ctx.session as any).addListing, contact: ctx.message.text, photos: [] };
-        await ctx.reply('Send up to 5 photos (send /done when finished):');
-        return ctx.wizard.next();
+        try {
+          // Validate contact length immediately
+          if (ctx.message.text.length < 2) {
+            await ctx.reply('❌ Contact info is too short! It must be at least 2 characters long. Please try again:');
+            return;
+          }
+          (ctx.session as any).addListing = { ...(ctx.session as any).addListing, contact: ctx.message.text, photos: [] };
+          await ctx.reply('Send up to 5 photos (send /done when finished):');
+          return ctx.wizard.next();
+        } catch (error) {
+          await ctx.reply('❌ Invalid contact info. Please try again:');
+        }
       }
-      await ctx.reply('Please send text for the contact info.');
+      await ctx.reply('Please send text for the contact info (minimum 2 characters).');
     },
     async (ctx: any) => {
       if (ctx.message && 'photo' in ctx.message) {
@@ -67,9 +107,9 @@ export function addListingWizard(prisma: PrismaClient) {
         (ctx.session as any).addListing.photos = (ctx.session as any).addListing.photos || [];
         if ((ctx.session as any).addListing.photos.length < 5) {
           (ctx.session as any).addListing.photos.push(fileId);
-          await ctx.reply(`Photo ${(ctx.session as any).addListing.photos.length}/5 received. Send more or /done.`);
+          await ctx.reply(`📸 Photo ${(ctx.session as any).addListing.photos.length}/5 received. Send more or /done.`);
         } else {
-          await ctx.reply('You have reached the maximum of 5 photos. Send /done to finish.');
+          await ctx.reply('📸 You have reached the maximum of 5 photos. Send /done to finish.');
         }
         return;
       }
@@ -106,10 +146,19 @@ export function addListingWizard(prisma: PrismaClient) {
           });
           console.log('Listing created:', listing);
           
-          await ctx.reply('Your listing has been added successfully! 🎉');
+          await ctx.reply('🎉 Your listing has been added successfully!', {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+            ]).reply_markup
+          });
         } catch (e) {
           console.error('Error saving listing:', e);
-          await ctx.reply('There was an error saving your listing. Please try again.');
+          if (e instanceof z.ZodError) {
+            const errorMessages = (e as any).errors.map((err: any) => `• ${err.message}`).join('\n');
+            await ctx.reply(`❌ Validation errors:\n${errorMessages}\n\nPlease fix these issues and try again.`);
+          } else {
+            await ctx.reply('❌ There was an error saving your listing. Please try again.');
+          }
         }
         return ctx.scene.leave();
       }

@@ -1,6 +1,7 @@
 import { Telegraf, Markup, Scenes } from 'telegraf';
 import { PrismaClient } from '../../prisma-client';
 import { BotContext } from '../types/context';
+import { showMainMenu } from './start';
 
 const PAGE_SIZE = 3;
 
@@ -14,7 +15,11 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
       include: { user: true },
     });
     if (!listings.length) {
-      await ctx.reply('No listings found.');
+      await ctx.reply('No listings found.', {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+        ]).reply_markup
+      });
       return;
     }
     for (const listing of listings) {
@@ -23,21 +28,32 @@ export async function handleBrowseListings(ctx: BotContext, prisma: PrismaClient
       if (listing.price) msg += `\n💵 Price: ${listing.price}`;
       msg += `\n📍 Location: ${listing.location}`;
       msg += `\n📞 Contact: ${listing.user.contact}`;
-      if (photos.length) {
-        await ctx.replyWithPhoto(photos[0], {
-          caption: msg,
-          parse_mode: 'Markdown',
-        });
+      
+      if (photos.length > 0) {
+        // Show all photos in a grouped media message
+        const mediaGroup = photos.map((fileId: string, i: number) => ({
+          type: 'photo',
+          media: fileId,
+          ...(i === 0 ? { caption: msg, parse_mode: 'Markdown' } : {})
+        }));
+        
+        await ctx.replyWithMediaGroup(mediaGroup);
       } else {
+        // No photos, just show the text
         await ctx.reply(msg, { parse_mode: 'Markdown' });
       }
     }
     await ctx.reply('Navigate:', Markup.inlineKeyboard([
-      [Markup.button.callback('⬅️ Prev', `browse_prev_${page}`), Markup.button.callback('➡️ Next', `browse_next_${page}`)]
+      [Markup.button.callback('⬅️ Prev', `browse_prev_${page}`), Markup.button.callback('➡️ Next', `browse_next_${page}`)],
+      [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')]
     ]));
   } catch (error) {
     console.error('Error in handleBrowseListings:', error);
-    await ctx.reply('Sorry, there was an error loading the listings. Please try again.');
+    await ctx.reply('Sorry, there was an error loading the listings. Please try again.', {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+      ]).reply_markup
+    });
   }
 }
 
@@ -49,7 +65,11 @@ export function registerBrowseListingsCommand(bot: Telegraf<BotContext>, prisma:
       await handleBrowseListings(ctx, prisma, 0);
     } catch (error) {
       console.error('Error in browse command:', error);
-      await ctx.reply('Sorry, there was an error. Please try again.');
+      await ctx.reply('Sorry, there was an error. Please try again.', {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
+        ]).reply_markup
+      });
     }
   });
   bot.action(/browse_next_(\d+)/, async (ctx) => {
