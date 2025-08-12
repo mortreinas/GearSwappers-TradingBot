@@ -16,7 +16,6 @@ export async function showMainMenu(ctx: BotContext) {
         [Markup.button.callback('🎛 Browse Listings', 'browse_listings')],
         [Markup.button.callback('➕ Add New Listing', 'add_listing')],
         [Markup.button.callback('📦 My Listings', 'my_listings')],
-        [Markup.button.callback('📃 Quick Listings View', 'quick_listings')],
         [Markup.button.callback('ℹ️ Help & Info', 'help_info')],
       ]).reply_markup
     }
@@ -24,6 +23,27 @@ export async function showMainMenu(ctx: BotContext) {
 }
 
 export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaClient) {
+  // Welcome new users automatically
+  bot.on('new_chat_members', async (ctx) => {
+    if (ctx.chat?.type !== 'private') return;
+    
+    // Check if the new member is the bot itself
+    const newMember = ctx.message.new_chat_members[0];
+    if (newMember.is_bot && newMember.id === ctx.botInfo?.id) {
+      await ctx.reply(
+        `🎸 *Welcome to GearTrader!*\n\n` +
+        `This bot helps you trade musical gear (no money involved).\n\n` +
+        `🔒 *Privacy Notice:*\n` +
+        `Your contact info and user data are stored *only while your listing is live*.\n` +
+        `As soon as you delete your last listing, all your data is permanently deleted.\n` +
+        `No personal information is retained longer than necessary.\n\n` +
+        `Here's your main menu:`,
+        { parse_mode: 'Markdown' }
+      );
+      await showMainMenu(ctx);
+    }
+  });
+
   // Start command shows welcome message and main menu
   bot.start(async (ctx) => {
     if (ctx.chat?.type !== 'private') return;
@@ -48,54 +68,54 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
     await showMainMenu(ctx);
   });
 
-  // Menu button actions
+  // Catch-all message handler - show menu for any text message
+  bot.on('text', async (ctx) => {
+    if (ctx.chat?.type !== 'private') return;
+    
+    // If it's not a command, show the main menu
+    if (!ctx.message.text.startsWith('/')) {
+      await ctx.reply(
+        `🎸 *Welcome to GearTrader!*\n\n` +
+        `Here's what you can do:`,
+        { parse_mode: 'Markdown' }
+      );
+      await showMainMenu(ctx);
+    }
+  });
+
+  // Handle menu button actions
   bot.action('browse_listings', async (ctx) => {
-    console.log('Browse Listings button pressed');
     await ctx.answerCbQuery();
     await handleBrowseListings(ctx, prisma, 0);
   });
-  
+
   bot.action('add_listing', async (ctx) => {
-    console.log('Add Listing button pressed');
     await ctx.answerCbQuery();
     await handleAddListing(ctx);
   });
-  
+
   bot.action('my_listings', async (ctx) => {
-    console.log('My Listings button pressed');
     await ctx.answerCbQuery();
     await handleMyListings(ctx, prisma);
   });
-  
-  bot.action('quick_listings', async (ctx) => {
-    console.log('Quick Listings button pressed');
-    await ctx.answerCbQuery();
-    // This will trigger the /listings command functionality
-    await ctx.reply('📋 Quick listings view:', {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('📋 Show All Listings', 'show_all_listings')],
-        [Markup.button.callback('🔙 Back to Menu', 'back_to_menu')],
-      ]).reply_markup
-    });
-  });
-  
+
   bot.action('help_info', async (ctx) => {
-    console.log('Help Info button pressed');
     await ctx.answerCbQuery();
     await ctx.reply(
-      `ℹ️ *GearTrader Help*\n\n` +
+      `🎸 *GearTrader Help*\n\n` +
       `*Commands:*\n` +
-      `• /start - Show this menu\n` +
+      `• /start - Show main menu\n` +
       `• /menu - Show main menu\n` +
-      `• /browse - Browse all listings\n` +
       `• /add - Add new listing\n` +
-      `• /mylistings - Manage your listings\n` +
-      `• /listings - Quick listings view\n\n` +
-      `*How to use:*\n` +
-      `1. Use /add to create a new listing\n` +
-      `2. Use /browse to see what others are offering\n` +
-      `3. Use /mylistings to manage your listings\n\n` +
-      `*Privacy:* Your data is only stored while you have active listings.`,
+      `• /browse - Browse all listings\n` +
+      `• /listings - View all listings\n` +
+      `• /mylistings - Manage your listings\n\n` +
+      `*Features:*\n` +
+      `• Add listings with photos\n` +
+      `• Browse and search listings\n` +
+      `• Contact sellers directly\n` +
+      `• Manage your own listings\n\n` +
+      `*Privacy:* Your data is only stored while your listings are active.`,
       {
         parse_mode: 'Markdown',
         reply_markup: Markup.inlineKeyboard([
@@ -104,18 +124,8 @@ export function registerStartCommand(bot: Telegraf<BotContext>, prisma: PrismaCl
       }
     );
   });
-  
-  bot.action('show_all_listings', async (ctx) => {
-    console.log('Show All Listings button pressed');
-    await ctx.answerCbQuery();
-    // Import and call the listings functionality
-    const { registerGroupListingsCommand } = require('./listings');
-    // This is a bit hacky, let me create a better approach
-    await ctx.reply('Use /listings command to see all listings, or use the Browse Listings option above.');
-  });
-  
+
   bot.action('back_to_menu', async (ctx) => {
-    console.log('Back to Menu button pressed');
     await ctx.answerCbQuery();
     await showMainMenu(ctx);
   });

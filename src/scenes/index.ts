@@ -17,5 +17,16 @@ export function setupScenes(bot: Telegraf<BotContext>, prisma: PrismaClient) {
     await ctx.wizard.next();
   });
   
+  // Add cancel listing button handler
+  bot.action('cancel_listing', async (ctx) => {
+    console.log('Cancel listing button pressed');
+    await ctx.answerCbQuery();
+    await ctx.reply('❌ Listing creation cancelled.');
+    await ctx.scene.leave();
+    // Import and call the showMainMenu function
+    const { showMainMenu } = require('../commands/start');
+    await showMainMenu(ctx);
+  });
+  
   (bot as any).use(stage.middleware());
 } 
